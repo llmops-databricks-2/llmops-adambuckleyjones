@@ -11,7 +11,7 @@ usage_policy_id: "6bc3dda5-d72e-3084-9c1c-29a87a79fa27"
 dev:
   catalog: "llmops_dev"
   schema: "adambuckleyjones"
-  volume: "arxiv_files"
+  volume: "laws_files"
   llm_endpoint: "course_ops.gateway.chat"
   embedding_endpoint: "course_ops.gateway.embed"
   warehouse_id: "e9cda9338abe31cc"
@@ -23,7 +23,7 @@ dev:
 acc:
   catalog: "llmops_acc"
   schema: "adambuckleyjones"
-  volume: "arxiv_files"
+  volume: "laws_files"
   llm_endpoint: "course_ops.gateway.chat"
   embedding_endpoint: "course_ops.gateway.embed"
   warehouse_id: "e9cda9338abe31cc"
@@ -35,7 +35,7 @@ acc:
 prd:
   catalog: "llmops_prd"
   schema: "adambuckleyjones"
-  volume: "arxiv_files"
+  volume: "laws_files"
   llm_endpoint: "course_ops.gateway.chat"
   embedding_endpoint: "course_ops.gateway.embed"
   warehouse_id: "e9cda9338abe31cc"

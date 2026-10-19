@@ -1,0 +1,98 @@
+# Referee AI: build plan
+
+Staged plan for the Referee AI course project. Each stage ends with something checkable and is one pull request.
+Stages 1–5 are the week 2 data work (due 21 Oct); stages 6–9 follow the course weeks.
+
+Architecture: https://claude.ai/artifact/4UzwdQTspMLCQMTsc8ci8L
+
+## Stage 1: get the PDF into Databricks and parse it
+
+1. The PDF is in the repo root, `Laws of the Game 2026_27_single pages.pdf` (260 pages, 22 MB). Keep it out of git: it is
+   over the 1 MB pre-commit limit and IFAB-copyrighted.
+2. Change `volume: "arxiv_files"` to `"laws_files"` in `project_config.yml` for all three environments, and update
+   `tests/test_config.py` to match.
+3. Create the volume and upload the PDF:
+
+   ```bash
+   databricks volumes create llmops_dev adambuckleyjones laws_files MANAGED -p llmops-course
+   databricks fs mkdir dbfs:/Volumes/llmops_dev/adambuckleyjones/laws_files/raw -p llmops-course
+   databricks fs cp "Laws of the Game 2026_27_single pages.pdf" dbfs:/Volumes/llmops_dev/adambuckleyjones/laws_files/raw/laws_of_the_game_2026_27.pdf -p llmops-course
+   ```
+
+4. Parse it in `notebooks/1_parse_laws.py`, on serverless:
+
+   ```sql
+   CREATE OR REPLACE TABLE llmops_dev.adambuckleyjones.laws_parsed AS
+   SELECT path, ai_parse_document(content) AS parsed, current_timestamp() AS parsed_at
+   FROM READ_FILES('/Volumes/llmops_dev/adambuckleyjones/laws_files/raw/', format => 'binaryFile');
+   ```
+
+5. Inspect the output: element and page counts, whether the "Law 1" to "Law 17" headings come out as separate elements,
+   and what happened to the offside diagrams.
+
+**Done when:** `laws_parsed` has one row, the text of Law 11 is readable in it, and you know what the headings look
+like (Stage 2 depends on it).
+
+**Status (14 Oct): done.** 260 pages, 1,742 elements, no errors. What the parse looks like:
+
+- Each Law is a `title` element ("Offside"), preceded by a `text` element with the number ("Law11"). Page footers also
+  carry it ("Law 11 | Offside").
+- Sections are numbered `section_header` elements ("1. Offside position", "2. Offside offence"), so `Law 11.1` keys
+  come straight from the headers.
+- Section text continues across pages after `page_footer` and `page_number` elements, so assign text to sections by
+  element order and drop footers, page numbers and figures.
+- The 256 figures are mostly IFAB logos and photos, with no offside diagrams in Law 11.
+- The course's `_extract_chunks` keeps only `text` elements and would lose every heading, so Stage 2 needs its own
+  splitter.
+- The PDF already contains "Outline summary of Law changes" (p166) and "Details of all Law changes" (p169–186), plus
+  the glossary (p194–207) and the practical guidelines (p208 onwards).
+
+## Stage 2: split it into sections
+
+1. Add `src/arxiv_curator/laws_processor.py`, which splits the parsed elements by law and section heading. Keep the
+   package name `arxiv_curator` so the lecture code keeps working.
+2. Add a unit test with a small sample of parsed JSON, so the splitter is tested without Databricks.
+3. Write two Delta tables: `laws` (law, section, title, text) and `laws_chunks` (one row per section, Change Data Feed
+   on).
+
+**Done when:** all 17 laws are present and `Law 12.3` returns the right text.
+
+## Stage 3: structured data
+
+1. Fill `law_changes` from the "Details of all Law changes" pages of the same PDF (p169–186).
+2. Build `scenarios.csv` with about 100 rows. Generate drafts with `gateway.chat`, then check each one by hand against a
+   law section. Load it into the Delta table `scenarios`.
+
+**Done when:** every scenario has a decision, a restart, a sanction and a reference to a law section.
+
+## Stage 4: embeddings in Lakebase
+
+1. Create a database in `lb-llmops-adambuckleyjones` and run `CREATE EXTENSION vector`.
+2. Embed `laws_chunks` and `scenarios` with `gateway.embed` and upsert them into `laws_chunk_vectors` and
+   `scenario_vectors`, both `vector(1024)` with an HNSW index.
+
+**Done when:** the query "handball on goal line" returns Law 12 sections in its top 3 results.
+
+## Stage 5: make it reproducible
+
+1. Add a bundle job, `laws-ingest`, that runs stages 1 (parse onward) to 4 from the volume. Uploading the PDF stays a
+   manual one-off step.
+2. Rebuild everything from an empty schema:
+
+   ```bash
+   databricks bundle deploy -t dev -p llmops-course
+   databricks bundle run laws-ingest -t dev -p llmops-course
+   ```
+
+**Done when:** the job rebuilds all tables and vectors from the PDF in the volume.
+
+## Later stages
+
+| Stage | Week | Work |
+|---|---|---|
+| 6 | 3 · 28 Oct | The four tools (`search_laws`, `find_similar_scenarios`, `get_law_section`, `get_law_changes`) and the agent loop. Test them in a notebook first. |
+| 7 | 4 · 4 Nov | MLflow tracing, and evaluations that use `scenarios` as ground truth. Record a baseline accuracy. |
+| 8 | 5 · 11 Nov | Serving endpoint and chat UI deployed through dev, acc and prd. |
+| 9 | 6 · 18 Nov | Monitoring of traces, judges on live traffic, gateway cost. |
+
+Demo day: 25 Nov.
