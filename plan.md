@@ -49,8 +49,7 @@ like (Stage 2 depends on it).
 
 ## Stage 2: split it into sections
 
-1. Add `src/arxiv_curator/laws_processor.py`, which splits the parsed elements by law and section heading. Keep the
-   package name `arxiv_curator` so the lecture code keeps working.
+1. Add `src/referee_ai/laws_processor.py`, which splits the parsed elements by law and section heading.
 2. Add a unit test with a small sample of parsed JSON, so the splitter is tested without Databricks.
 3. Write two Delta tables: `laws` (law, section, title, text) and `laws_chunks` (one row per section, Change Data Feed
    on).

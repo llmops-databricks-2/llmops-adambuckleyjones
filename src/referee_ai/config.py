@@ -1,4 +1,4 @@
-"""Configuration management for Arxiv Curator."""
+"""Configuration management for Referee AI."""
 
 import os
 from pathlib import Path

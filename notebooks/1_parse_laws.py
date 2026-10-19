@@ -13,7 +13,7 @@
 from databricks.sdk.runtime import dbutils
 from pyspark.sql import SparkSession
 
-from arxiv_curator.config import load_config
+from referee_ai.config import load_config
 
 dbutils.widgets.text("env", "dev")
 env = dbutils.widgets.get("env")
