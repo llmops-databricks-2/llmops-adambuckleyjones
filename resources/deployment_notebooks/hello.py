@@ -3,6 +3,8 @@
 # Databricks MAGIC comments are executable notebook cells.
 """Check the deployed wheel, configuration and schema write access."""
 
+# COMMAND ----------
+
 # MAGIC %md
 # MAGIC # Hello
 # MAGIC

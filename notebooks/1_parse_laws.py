@@ -2,6 +2,8 @@
 # ruff: noqa: ERA001
 """Parse the Laws of the Game PDFs in the laws_files volume into the laws_parsed table."""
 
+# COMMAND ----------
+
 # MAGIC %md
 # MAGIC # Parse the Laws of the Game
 # MAGIC
