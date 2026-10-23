@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Referee AI Build Plan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Source+Sans+3:wght@400;600&family=JetBrains+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: one reading column; a stage tracker up top, then one block per stage with steps, commands and a done-when check. */
+:root {
+  --bg: #f5f6f2;
+  --surface: #ffffff;
+  --code: #eef1ec;
+  --fg: #19201b;
+  --muted: #5b655e;
+  --line: #d3d9d1;
+  --accent: #1d6a43;
+  --done: #1d6a43;
+  --done-bg: #e2f0e7;
+  --next: #8a5a00;
+  --next-bg: #f7ecd4;
+  --plan: #5b655e;
+  --plan-bg: #eceee9;
+  --display: "Barlow Condensed", "Arial Narrow", sans-serif;
+  --body: "Source Sans 3", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121714; --surface: #1a211c; --code: #0f1411; --fg: #e4e9e4; --muted: #9ba69e; --line: #333d36; --accent: #6cc196;
+    --done: #7fd0a5; --done-bg: #1b3326; --next: #e3b866; --next-bg: #3a2e17; --plan: #9ba69e; --plan-bg: #242b26;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121714; --surface: #1a211c; --code: #0f1411; --fg: #e4e9e4; --muted: #9ba69e; --line: #333d36; --accent: #6cc196;
+  --done: #7fd0a5; --done-bg: #1b3326; --next: #e3b866; --next-bg: #3a2e17; --plan: #9ba69e; --plan-bg: #242b26;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 400 16.5px/1.6 var(--body); }
+.wrap { max-width: 860px; margin: 0 auto; padding-inline: 16px; padding-block: 40px 72px; display: grid; gap: 36px; }
+header { display: grid; gap: 10px; }
+.eyebrow { font: 600 12.5px/1 var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--accent); }
+h1 { font: 700 clamp(36px, 7vw, 54px)/1.02 var(--display); letter-spacing: .01em; margin: 0; text-wrap: balance; }
+h2 { font: 700 28px/1.1 var(--display); letter-spacing: .01em; margin: 0; text-wrap: balance; }
+h3 { font: 600 13px/1 var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 0; }
+p { margin: 0; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+code { font: 500 .86em var(--mono); background: var(--code); border-radius: 4px; padding: 1px 5px; overflow-wrap: anywhere; }
+pre { margin: 0; background: var(--code); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; overflow-x: auto; }
+pre code { background: none; padding: 0; font-size: 13px; line-height: 1.6; overflow-wrap: normal; white-space: pre; }
+.lede { color: var(--muted); max-width: 64ch; }
+
+.tracker { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+.tracker li { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; display: grid; gap: 4px; min-width: 0; }
+.tracker a { color: inherit; text-decoration: none; display: grid; gap: 4px; }
+.tracker a:hover .tname { text-decoration: underline; }
+.tnum { font: 600 12px var(--mono); color: var(--muted); }
+.tname { font-weight: 600; line-height: 1.3; }
+
+.pill { justify-self: start; font: 600 11px/1 var(--mono); letter-spacing: .05em; text-transform: uppercase; border-radius: 999px; padding: 5px 9px; }
+.pill.done { color: var(--done); background: var(--done-bg); }
+.pill.next { color: var(--next); background: var(--next-bg); }
+.pill.plan { color: var(--plan); background: var(--plan-bg); }
+
+.stage { display: grid; gap: 16px; padding-top: 28px; border-top: 1px solid var(--line); scroll-margin-top: 16px; }
+.stage-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+.stage-head .snum { font: 700 28px/1 var(--display); color: var(--accent); }
+ol.steps { margin: 0; padding-left: 22px; display: grid; gap: 12px; }
+ol.steps li { padding-left: 4px; }
+ol.steps li > * + * { margin-top: 8px; }
+ul.notes { margin: 0; padding-left: 20px; display: grid; gap: 8px; }
+
+.check { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: start; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; }
+.check .label { font: 600 12px/1.5 var(--mono); letter-spacing: .05em; text-transform: uppercase; color: var(--accent); white-space: nowrap; }
+.status { display: grid; gap: 12px; background: var(--done-bg); border-radius: 8px; padding: 14px 16px; }
+.status p strong { color: var(--done); }
+
+.tbl { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 15.5px; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+th { font: 600 12px var(--mono); letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
+td.wk { font: 600 13px var(--mono); color: var(--accent); white-space: nowrap; font-variant-numeric: tabular-nums; }
+td.sn { font: 700 20px/1.2 var(--display); }
+.nextsteps { display: grid; gap: 14px; background: var(--next-bg); border-radius: 10px; padding: 18px 20px; }
+.nextsteps h2 { color: var(--next); }
+.nextsteps ol { margin: 0; padding-left: 22px; display: grid; gap: 12px; }
+.nextsteps ul { margin: 6px 0 0; padding-left: 20px; display: grid; gap: 6px; }
+footer { color: var(--muted); font-size: 14px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">LLMOps course project · Referee AI</div>
+    <h1>Build plan</h1>
+    <p class="lede">Each stage ends with something you can check, and each one is a single pull request. Stages 1–5 are the week 2 data work, due 21 Oct. Stages 6–9 follow the course weeks. Demo day is 25 Nov.</p>
+    <p><a href="https://claude.ai/artifact/4UzwdQTspMLCQMTsc8ci8L">Architecture diagrams</a></p>
+  </header>
+
+  <section class="nextsteps" id="next">
+    <h2>Next steps (23 Oct)</h2>
+    <ol>
+      <li><strong>Watch lecture 2</strong> (data &amp; knowledge processing).</li>
+      <li><strong>Email FA contacts</strong> for past quiz questions as CSV, with permission to use them. Ask for: question_id, question, options, correct_answer, explanation, law_reference, season. Recheck older seasons against the 2026/27 changes.</li>
+      <li><strong>Stage 2: the section splitter.</strong> Join each element's <code>page_id</code> to <code>page_map.csv</code> so chunks cite the original page.</li>
+    </ol>
+    <p><strong>Done so far:</strong></p>
+    <ul>
+      <li>PR #2, "Weeks 1–2", on branch <code>week1</code>: Stage 1, the <code>referee_ai</code> rename, the notebook fix and the PDF split.</li>
+      <li>The PDF is split into 17 Laws plus the law changes in <code>data/laws/</code>, with <code>scripts/split_laws.py</code> reading the page ranges from the contents pages. No images; near-empty pages and six diagram pages (79, 88–90, 104, 117: signals, goal line, handball) are dropped, so what those diagrams show isn't in the text.</li>
+      <li>Pages keep their original numbers as PDF page labels, and <code>data/laws/page_map.csv</code> maps each file page to its original page for citations.</li>
+      <li>In Databricks: the 18 split PDFs are in <code>laws_files/raw/</code>, the full PDF in <code>laws_files/source/</code> and the page map at <code>laws_files/page_map.csv</code>. <code>laws_parsed</code> was rebuilt by running <code>notebooks/1_parse_laws.py</code> as a job: 18 files, 101 pages, 772 elements, no errors, and the page counts match the page map.</li>
+    </ul>
+  </section>
+
+  <ol class="tracker" aria-label="Stage status">
+    <li><a href="#stage-1"><span class="tnum">Stage 1</span><span class="tname">Load and parse the PDF</span></a><span class="pill done">Done · PR #2</span></li>
+    <li><a href="#stage-2"><span class="tnum">Stage 2</span><span class="tname">Split into sections</span></a><span class="pill next">Next</span></li>
+    <li><a href="#stage-3"><span class="tnum">Stage 3</span><span class="tname">Structured data</span></a><span class="pill plan">Planned</span></li>
+    <li><a href="#stage-4"><span class="tnum">Stage 4</span><span class="tname">Embeddings in Lakebase</span></a><span class="pill plan">Planned</span></li>
+    <li><a href="#stage-5"><span class="tnum">Stage 5</span><span class="tname">Make it reproducible</span></a><span class="pill plan">Planned</span></li>
+    <li><a href="#later"><span class="tnum">Stages 6–9</span><span class="tname">Agent, evals, deploy, monitor</span></a><span class="pill plan">Weeks 3–6</span></li>
+  </ol>
+
+  <section class="stage" id="stage-1">
+    <div class="stage-head"><span class="snum">1</span><h2>Get the PDF into Databricks and parse it</h2><span class="pill done">Done · PR #2 in review</span></div>
+    <ol class="steps">
+      <li><p>The PDF is in the repo root, <code>Laws of the Game 2026_27_single pages.pdf</code> (260 pages, 22 MB). Keep it out of git: it's over the 1 MB pre-commit limit and IFAB-copyrighted.</p></li>
+      <li><p>Change <code>volume: "arxiv_files"</code> to <code>"laws_files"</code> in <code>project_config.yml</code> for all three environments, and update <code>tests/test_config.py</code> to match.</p></li>
+      <li>
+        <p>Create the volume and upload the PDF:</p>
+        <pre><code>databricks volumes create llmops_dev adambuckleyjones laws_files MANAGED -p llmops-course
+databricks fs mkdir dbfs:/Volumes/llmops_dev/adambuckleyjones/laws_files/raw -p llmops-course
+databricks fs cp "Laws of the Game 2026_27_single pages.pdf" dbfs:/Volumes/llmops_dev/adambuckleyjones/laws_files/raw/laws_of_the_game_2026_27.pdf -p llmops-course</code></pre>
+      </li>
+      <li>
+        <p>Parse it in <code>notebooks/1_parse_laws.py</code>, on serverless:</p>
+        <pre><code>CREATE OR REPLACE TABLE llmops_dev.adambuckleyjones.laws_parsed AS
+SELECT path, ai_parse_document(content) AS parsed, current_timestamp() AS parsed_at
+FROM READ_FILES('/Volumes/llmops_dev/adambuckleyjones/laws_files/raw/', format =&gt; 'binaryFile');</code></pre>
+      </li>
+      <li><p>Inspect the output: element and page counts, whether the "Law 1" to "Law 17" headings come out as separate elements, and what happened to the offside diagrams.</p></li>
+    </ol>
+    <div class="check"><span class="label">Done when</span><p><code>laws_parsed</code> has one row, the text of Law 11 is readable in it, and you know what the headings look like. Stage 2 depends on that.</p></div>
+    <div class="status">
+      <p><strong>Status (14 Oct): done.</strong> 260 pages, 1,742 elements, no errors. What the parse looks like:</p>
+      <ul class="notes">
+        <li>Each Law is a <code>title</code> element ("Offside"), preceded by a <code>text</code> element with the number ("Law11"). Page footers also carry it ("Law 11 | Offside").</li>
+        <li>Sections are numbered <code>section_header</code> elements ("1. Offside position", "2. Offside offence"), so <code>Law 11.1</code> keys come straight from the headers.</li>
+        <li>Section text continues across pages after <code>page_footer</code> and <code>page_number</code> elements, so assign text to sections by element order and drop footers, page numbers and figures.</li>
+        <li>The 256 figures are mostly IFAB logos and photos, with no offside diagrams in Law 11.</li>
+        <li>The course's <code>_extract_chunks</code> keeps only <code>text</code> elements and would lose every heading, so Stage 2 needs its own splitter.</li>
+        <li>The PDF already contains "Outline summary of Law changes" (p166) and "Details of all Law changes" (p169–186), plus the glossary (p194–207) and the practical guidelines (p208 onwards).</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="stage" id="stage-2">
+    <div class="stage-head"><span class="snum">2</span><h2>Split it into sections</h2><span class="pill next">Next</span></div>
+    <ol class="steps">
+      <li><p>Add <code>src/referee_ai/laws_processor.py</code>, which splits the parsed elements by law and section heading.</p></li>
+      <li><p>Add a unit test with a small sample of parsed JSON, so the splitter is tested without Databricks.</p></li>
+      <li><p>Write two Delta tables: <code>laws</code> (law, section, title, text) and <code>laws_chunks</code> (one row per section, Change Data Feed on).</p></li>
+    </ol>
+    <div class="check"><span class="label">Done when</span><p>All 17 laws are present and <code>Law 12.3</code> returns the right text.</p></div>
+  </section>
+
+  <section class="stage" id="stage-3">
+    <div class="stage-head"><span class="snum">3</span><h2>Structured data</h2><span class="pill plan">Planned</span></div>
+    <ol class="steps">
+      <li><p>Fill <code>law_changes</code> from the "Details of all Law changes" pages of the same PDF (p169–186).</p></li>
+      <li><p>Build <code>scenarios.csv</code> with about 100 rows. Generate drafts with <code>gateway.chat</code>, then check each one by hand against a law section. Load it into the Delta table <code>scenarios</code>.</p></li>
+    </ol>
+    <div class="check"><span class="label">Done when</span><p>Every scenario has a decision, a restart, a sanction and a reference to a law section.</p></div>
+  </section>
+
+  <section class="stage" id="stage-4">
+    <div class="stage-head"><span class="snum">4</span><h2>Embeddings in Lakebase</h2><span class="pill plan">Planned</span></div>
+    <ol class="steps">
+      <li><p>Create a database in <code>lb-llmops-adambuckleyjones</code> and run <code>CREATE EXTENSION vector</code>.</p></li>
+      <li><p>Embed <code>laws_chunks</code> and <code>scenarios</code> with <code>gateway.embed</code> and upsert them into <code>laws_chunk_vectors</code> and <code>scenario_vectors</code>, both <code>vector(1024)</code> with an HNSW index.</p></li>
+    </ol>
+    <div class="check"><span class="label">Done when</span><p>The query "handball on goal line" returns Law 12 sections in its top 3 results.</p></div>
+  </section>
+
+  <section class="stage" id="stage-5">
+    <div class="stage-head"><span class="snum">5</span><h2>Make it reproducible</h2><span class="pill plan">Planned</span></div>
+    <ol class="steps">
+      <li><p>Add a bundle job, <code>laws-ingest</code>, that runs stages 1 (parse onward) to 4 from the volume. Uploading the PDF stays a manual one-off step.</p></li>
+      <li>
+        <p>Rebuild everything from an empty schema:</p>
+        <pre><code>databricks bundle deploy -t dev -p llmops-course
+databricks bundle run laws-ingest -t dev -p llmops-course</code></pre>
+      </li>
+    </ol>
+    <div class="check"><span class="label">Done when</span><p>The job rebuilds all tables and vectors from the PDF in the volume.</p></div>
+  </section>
+
+  <section class="stage" id="later">
+    <div class="stage-head"><h2>Later stages</h2></div>
+    <div class="tbl">
+      <table>
+        <thead><tr><th>Stage</th><th>Week</th><th>Work</th></tr></thead>
+        <tbody>
+          <tr><td class="sn">6</td><td class="wk">3 · 28 Oct</td><td>The four tools (<code>search_laws</code>, <code>find_similar_scenarios</code>, <code>get_law_section</code>, <code>get_law_changes</code>) and the agent loop. Test them in a notebook first.</td></tr>
+          <tr><td class="sn">7</td><td class="wk">4 · 4 Nov</td><td>MLflow tracing, and evaluations that use <code>scenarios</code> as ground truth. Record a baseline accuracy.</td></tr>
+          <tr><td class="sn">8</td><td class="wk">5 · 11 Nov</td><td>Serving endpoint and chat UI deployed through dev, acc and prd.</td></tr>
+          <tr><td class="sn">9</td><td class="wk">6 · 18 Nov</td><td>Monitoring of traces, judges on live traffic, gateway cost.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Demo day: 25 Nov.</p>
+  </section>
+
+  <footer>Generated from <code>plan.md</code>, which remains the source to edit.</footer>
+</div>
+</body>
+</html>

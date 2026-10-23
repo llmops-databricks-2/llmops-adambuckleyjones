@@ -5,6 +5,25 @@ Stages 1–5 are the week 2 data work (due 21 Oct); stages 6–9 follow the cour
 
 Architecture: https://claude.ai/artifact/4UzwdQTspMLCQMTsc8ci8L
 
+## Next steps (23 Oct)
+
+1. Watch lecture 2 (data & knowledge processing).
+2. Email FA contacts for past quiz questions as CSV, with permission to use them. Ask for: question_id, question,
+   options, correct_answer, explanation, law_reference, season. Recheck older seasons against the 2026/27 changes.
+3. Stage 2: the section splitter. Join each element's `page_id` to `page_map.csv` so chunks cite the original page.
+
+**Done so far:**
+
+- PR #2, "Weeks 1–2", on branch `week1`: Stage 1, the `referee_ai` rename, the notebook fix and the PDF split.
+- The PDF is split into 17 Laws plus the law changes in `data/laws/`, with `scripts/split_laws.py` reading the page
+  ranges from the contents pages. No images; near-empty pages and six diagram pages (79, 88–90, 104, 117: signals,
+  goal line, handball) are dropped, so what those diagrams show isn't in the text.
+- Pages keep their original numbers as PDF page labels, and `data/laws/page_map.csv` maps each file page to its
+  original page for citations.
+- In Databricks: the 18 split PDFs are in `laws_files/raw/`, the full PDF in `laws_files/source/` and the page map at
+  `laws_files/page_map.csv`. `laws_parsed` was rebuilt by running `notebooks/1_parse_laws.py` as a job: 18 files,
+  101 pages, 772 elements, no errors, and the page counts match the page map.
+
 ## Stage 1: get the PDF into Databricks and parse it
 
 1. The PDF is in the repo root, `Laws of the Game 2026_27_single pages.pdf` (260 pages, 22 MB). Keep it out of git: it is
