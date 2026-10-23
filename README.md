@@ -4,6 +4,18 @@ Your repository for the LLMOps course on Databricks. Everything you need in
 the course workspace was provisioned for you before you got this repo, and every id is already in
 `project_config.yml`: you configure nothing.
 
+## Referee AI
+
+The project in this repo: an assistant that helps football referees and referee exam candidates answer questions on
+the IFAB Laws of the Game 2026/27, citing the Law, section and page. Progress and next steps are in `plan.md`
+(also `plan.html`); the first model experiment is in `gateway_experiment.html`.
+
+- `scripts/split_laws.py` splits the Laws PDF into one PDF per Law plus the law changes, and writes
+  `data/laws/page_map.csv` so citations use the original pages.
+- The `laws_ingest` job (`resources/laws_ingest.job.yml`) parses the split PDFs (`notebooks/1_parse_laws.py`) and
+  writes the `laws` and `laws_chunks` tables (`notebooks/2_split_sections.py`).
+- `src/referee_ai/laws_processor.py` holds the section and chunk logic, tested in `tests/test_laws_processor.py`.
+
 ## Join the course Discord
 
 Join the course's Discord server with this invite link:
@@ -18,7 +30,7 @@ on the student list.
 | Your schema in development, which you manage | `llmops_dev.adambuckleyjones` |
 | Your schema in acceptance, which you read | `llmops_acc.adambuckleyjones` |
 | Your schema in production, which you read | `llmops_prd.adambuckleyjones` |
-| Suggested volume name (create during the course) | `arxiv_files`, such as `llmops_dev.adambuckleyjones.arxiv_files` |
+| Volume (created in week 1) | `laws_files`, such as `llmops_dev.adambuckleyjones.laws_files` |
 | SQL warehouse id | `e9cda9338abe31cc` |
 | Usage policy id | `6bc3dda5-d72e-3084-9c1c-29a87a79fa27` |
 | MLflow experiments | Dev: `/llmops/adambuckleyjones-dev`; acc: `/llmops/adambuckleyjones-acc`; prd: `/llmops/adambuckleyjones-prd` |
@@ -64,7 +76,7 @@ suspension after five idle minutes. Creating extra branches or computes can incr
 
 ## What is in the repo
 
-- `src/arxiv_curator/`: starts with `config.py`, which loads `project_config.yml`.
+- `src/referee_ai/`: starts with `config.py`, which loads `project_config.yml`.
   Add the other course modules as you work through the lectures.
 - `lecture_1/`, `lecture_2/` and so on, when you add them: copy a lecture's folder from the course
   code as it is, to the root of this repo, where its notebooks find `project_config.yml` one level up.
