@@ -10,7 +10,7 @@ Architecture: https://claude.ai/artifact/4UzwdQTspMLCQMTsc8ci8L
 1. Watch lecture 2 (data & knowledge processing).
 2. Email FA contacts for past quiz questions as CSV, with permission to use them. Ask for: question_id, question,
    options, correct_answer, explanation, law_reference, season. Recheck older seasons against the 2026/27 changes.
-3. Stage 2: the section splitter. Join each element's `page_id` to `page_map.csv` so chunks cite the original page.
+3. Stage 3: `law_changes` from the law changes file, and `scenarios` from the FA quiz CSV.
 
 **Done so far:**
 
@@ -70,10 +70,15 @@ like (Stage 2 depends on it).
 
 1. Add `src/referee_ai/laws_processor.py`, which splits the parsed elements by law and section heading.
 2. Add a unit test with a small sample of parsed JSON, so the splitter is tested without Databricks.
-3. Write two Delta tables: `laws` (law, section, title, text) and `laws_chunks` (one row per section, Change Data Feed
-   on).
+3. Write two Delta tables: `laws` (one row per section: law, section, title, text, pages) and `laws_chunks` (one chunk
+   per subheading block, prefixed with its law and section). The Laws are static, so both are rebuilt only for a new
+   edition.
 
 **Done when:** all 17 laws are present and `Law 12.3` returns the right text.
+
+**Status (23 Oct): done, not committed yet.** `notebooks/2_split_sections.py` ran as a job: `laws` has 86 sections
+across all 17 Laws and `laws_chunks` has 138 chunks, each with its original pages. In this edition 12.3 is "Corner
+kick" (p119) and disciplinary action is 12.4. Law 6 has no section 6: the signals were on the dropped diagram pages.
 
 ## Stage 3: structured data
 
