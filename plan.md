@@ -5,12 +5,21 @@ Stages 1–5 are the week 2 data work (due 21 Oct); stages 6–9 follow the cour
 
 Architecture: https://claude.ai/artifact/4UzwdQTspMLCQMTsc8ci8L
 
-## Next steps (23 Oct)
+## Next steps (24 Oct)
 
-1. Watch lecture 2 (data & knowledge processing).
-2. Email FA contacts for past quiz questions as CSV, with permission to use them. Ask for: question_id, question,
-   options, correct_answer, explanation, law_reference, season. Recheck older seasons against the 2026/27 changes.
-3. Stage 3: `law_changes` from the law changes file, and `scenarios` from the FA quiz CSV.
+1. Set up the Databricks VS Code extension with profile `llmops-course` and run something from it (the brief asks
+   for it; Databricks Connect already works from the venv).
+2. Watch lecture 2, then email FA contacts for past quiz questions as CSV, with permission to use them. Ask for:
+   question_id, question, options, correct_answer, explanation, law_reference, season. Recheck older seasons against
+   the 2026/27 changes.
+3. Start a `week2` branch and bring in lecture 2's changes (`course-code-hub`, branch `lecture2`):
+   - `embedding_endpoint` becomes `databricks-gte-large-en`, because `ai_query` can't call custom Gateway model
+     services such as `course_ops.gateway.embed` yet.
+   - `lakebase_instance` is renamed `lakebase_project_id` in `project_config.yml` and `config.py`.
+   - Retrieval uses Databricks AI Search (2.4) and Lakebase synced tables (2.5): redo Stage 4 that way.
+4. Stage 3: `law_changes` from the law changes file, and `scenarios` once the FA questions arrive.
+5. Lecture 3 (28 Oct), already in `course-code-hub`: agent, MCP tools, memory, evaluation, serving (Stage 6).
+6. PR #2 is waiting for a review.
 
 **Done so far:**
 
@@ -96,6 +105,9 @@ kick" (p119) and disciplinary action is 12.4. Law 6 has no section 6: the signal
 
 ## Stage 4: embeddings in Lakebase
 
+**To revisit after lecture 2:** the course now uses Databricks AI Search and Lakebase synced tables, with
+`databricks-gte-large-en` for embeddings. Follow the lecture rather than the steps below.
+
 1. Create a database in `lb-llmops-adambuckleyjones` and run `CREATE EXTENSION vector`.
 2. Embed `laws_chunks` and `scenarios` with `gateway.embed` and upsert them into `laws_chunk_vectors` and
    `scenario_vectors`, both `vector(1024)` with an HNSW index.
@@ -104,16 +116,19 @@ kick" (p119) and disciplinary action is 12.4. Law 6 has no section 6: the signal
 
 ## Stage 5: make it reproducible
 
-1. Add a bundle job, `laws-ingest`, that runs stages 1 (parse onward) to 4 from the volume. Uploading the PDF stays a
-   manual one-off step.
+1. Bundle job `laws_ingest` (`resources/laws_ingest.job.yml`): parse, then split, from the volume. Add the embedding
+   step from Stage 4 when it exists. Uploading the split PDFs stays a manual one-off step.
 2. Rebuild everything from an empty schema:
 
    ```bash
    databricks bundle deploy -t dev -p llmops-course
-   databricks bundle run laws-ingest -t dev -p llmops-course
+   databricks bundle run laws_ingest -t dev -p llmops-course
    ```
 
-**Done when:** the job rebuilds all tables and vectors from the PDF in the volume.
+**Done when:** the job rebuilds all tables and vectors from the PDFs in the volume.
+
+**Status (23 Oct): partly done, in PR #2.** The job runs parse and split on dev (86 sections, 138 chunks); the
+embedding step is still to add.
 
 ## Later stages
 
