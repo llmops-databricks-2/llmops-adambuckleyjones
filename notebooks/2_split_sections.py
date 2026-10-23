@@ -64,4 +64,14 @@ chunks_df = spark.createDataFrame(
 laws_df.write.mode("overwrite").option("overwriteSchema", "true").saveAsTable(laws_table)
 chunks_df.write.mode("overwrite").option("overwriteSchema", "true").saveAsTable(chunks_table)
 
+# COMMAND ----------
+
+for table in (laws_table, chunks_table):
+    df = spark.table(table)
+    print(f"{table}: {df.count()} rows")
+    df.printSchema()
+    df.orderBy("law_number", "section").show(5, truncate=80)
+
+# COMMAND ----------
+
 dbutils.notebook.exit(json.dumps({"status": "ok", "laws": len(sections), "laws_chunks": len(chunks)}))

@@ -23,6 +23,12 @@ Architecture: https://claude.ai/artifact/4UzwdQTspMLCQMTsc8ci8L
 - In Databricks: the 18 split PDFs are in `laws_files/raw/`, the full PDF in `laws_files/source/` and the page map at
   `laws_files/page_map.csv`. `laws_parsed` was rebuilt by running `notebooks/1_parse_laws.py` as a job: 18 files,
   101 pages, 772 elements, no errors, and the page counts match the page map.
+- The ingest runs as a bundle job, `laws_ingest` (`resources/laws_ingest.job.yml`: parse, then split), validated,
+  deployed to dev and run. It prints the schema and sample rows of `laws` and `laws_chunks`.
+- `notebooks/3_gateway_experiment.py` asked the chat model five referee questions through the AI Gateway with no
+  retrieval: 2 right, 1 right with a made-up quote, 2 wrong (old goalkeeper rule, invented page). Results in
+  `gateway_experiment.html`.
+- Databricks Connect works from the venv on serverless (`laws` read from VS Code's environment).
 
 ## Stage 1: get the PDF into Databricks and parse it
 
@@ -76,7 +82,7 @@ like (Stage 2 depends on it).
 
 **Done when:** all 17 laws are present and `Law 12.3` returns the right text.
 
-**Status (23 Oct): done, not committed yet.** `notebooks/2_split_sections.py` ran as a job: `laws` has 86 sections
+**Status (23 Oct): done, in PR #2.** `notebooks/2_split_sections.py` ran as a job: `laws` has 86 sections
 across all 17 Laws and `laws_chunks` has 138 chunks, each with its original pages. In this edition 12.3 is "Corner
 kick" (p119) and disciplinary action is 12.4. Law 6 has no section 6: the signals were on the dropped diagram pages.
 

@@ -116,13 +116,16 @@ footer { color: var(--muted); font-size: 14px; }
       <li>The PDF is split into 17 Laws plus the law changes in <code>data/laws/</code>, with <code>scripts/split_laws.py</code> reading the page ranges from the contents pages. No images; near-empty pages and six diagram pages (79, 88–90, 104, 117: signals, goal line, handball) are dropped, so what those diagrams show isn't in the text.</li>
       <li>Pages keep their original numbers as PDF page labels, and <code>data/laws/page_map.csv</code> maps each file page to its original page for citations.</li>
       <li>In Databricks: the 18 split PDFs are in <code>laws_files/raw/</code>, the full PDF in <code>laws_files/source/</code> and the page map at <code>laws_files/page_map.csv</code>. <code>laws_parsed</code> was rebuilt by running <code>notebooks/1_parse_laws.py</code> as a job: 18 files, 101 pages, 772 elements, no errors, and the page counts match the page map.</li>
+      <li>The ingest runs as a bundle job, <code>laws_ingest</code> (<code>resources/laws_ingest.job.yml</code>: parse, then split), validated, deployed to dev and run. It prints the schema and sample rows of <code>laws</code> and <code>laws_chunks</code>.</li>
+      <li><code>notebooks/3_gateway_experiment.py</code> asked the chat model five referee questions through the AI Gateway with no retrieval: 2 right, 1 right with a made-up quote, 2 wrong (old goalkeeper rule, invented page). Results in <code>gateway_experiment.html</code>.</li>
+      <li>Databricks Connect works from the venv on serverless (<code>laws</code> read from VS Code's environment).</li>
     </ul>
   </section>
 
   <ol class="tracker" aria-label="Stage status">
     <li><a href="#stage-1"><span class="tnum">Stage 1</span><span class="tname">Load and parse the PDF</span></a><span class="pill done">Done · PR #2</span></li>
     <li><a href="#next"><span class="tnum">Week 2</span><span class="tname">Split into 18 PDFs and re-parse</span></a><span class="pill done">Done · PR #2</span></li>
-    <li><a href="#stage-2"><span class="tnum">Stage 2</span><span class="tname">Split into sections</span></a><span class="pill done">Done · not committed</span></li>
+    <li><a href="#stage-2"><span class="tnum">Stage 2</span><span class="tname">Split into sections</span></a><span class="pill done">Done · PR #2</span></li>
     <li><a href="#stage-3"><span class="tnum">Stage 3</span><span class="tname">Structured data</span></a><span class="pill next">Next</span></li>
     <li><a href="#stage-4"><span class="tnum">Stage 4</span><span class="tname">Embeddings in Lakebase</span></a><span class="pill plan">Planned</span></li>
     <li><a href="#stage-5"><span class="tnum">Stage 5</span><span class="tname">Make it reproducible</span></a><span class="pill plan">Planned</span></li>
@@ -163,14 +166,14 @@ FROM READ_FILES('/Volumes/llmops_dev/adambuckleyjones/laws_files/raw/', format =
   </section>
 
   <section class="stage" id="stage-2">
-    <div class="stage-head"><span class="snum">2</span><h2>Split it into sections</h2><span class="pill done">Done · not committed</span></div>
+    <div class="stage-head"><span class="snum">2</span><h2>Split it into sections</h2><span class="pill done">Done · PR #2</span></div>
     <ol class="steps">
       <li><p>Add <code>src/referee_ai/laws_processor.py</code>, which splits the parsed elements by law and section heading.</p></li>
       <li><p>Add a unit test with a small sample of parsed JSON, so the splitter is tested without Databricks.</p></li>
       <li><p>Write two Delta tables: <code>laws</code> (one row per section: law, section, title, text, pages) and <code>laws_chunks</code> (one chunk per subheading block, prefixed with its law and section). The Laws are static, so both are rebuilt only for a new edition.</p></li>
     </ol>
     <div class="check"><span class="label">Done when</span><p>All 17 laws are present and <code>Law 12.3</code> returns the right text.</p></div>
-    <div class="status"><p><strong>Status (23 Oct): done, not committed yet.</strong> <code>notebooks/2_split_sections.py</code> ran as a job: <code>laws</code> has 86 sections across all 17 Laws and <code>laws_chunks</code> has 138 chunks, each with its original pages. In this edition 12.3 is "Corner kick" (p119) and disciplinary action is 12.4. Law 6 has no section 6: the signals were on the dropped diagram pages.</p></div>
+    <div class="status"><p><strong>Status (23 Oct): done, in PR #2.</strong> <code>notebooks/2_split_sections.py</code> ran as a job: <code>laws</code> has 86 sections across all 17 Laws and <code>laws_chunks</code> has 138 chunks, each with its original pages. In this edition 12.3 is "Corner kick" (p119) and disciplinary action is 12.4. Law 6 has no section 6: the signals were on the dropped diagram pages.</p></div>
   </section>
 
   <section class="stage" id="stage-3">
