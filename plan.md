@@ -7,19 +7,14 @@ Architecture: https://claude.ai/artifact/4UzwdQTspMLCQMTsc8ci8L
 
 ## Next steps (24 Oct)
 
-1. Set up the Databricks VS Code extension with profile `llmops-course` and run something from it (the brief asks
-   for it; Databricks Connect already works from the venv).
-2. Watch lecture 2, then email FA contacts for past quiz questions as CSV, with permission to use them. Ask for:
-   question_id, question, options, correct_answer, explanation, law_reference, season. Recheck older seasons against
-   the 2026/27 changes.
-3. Start a `week2` branch and bring in lecture 2's changes (`course-code-hub`, branch `lecture2`):
-   - `embedding_endpoint` becomes `databricks-gte-large-en`, because `ai_query` can't call custom Gateway model
-     services such as `course_ops.gateway.embed` yet.
-   - `lakebase_instance` is renamed `lakebase_project_id` in `project_config.yml` and `config.py`.
-   - Retrieval uses Databricks AI Search (2.4) and Lakebase synced tables (2.5): redo Stage 4 that way.
-4. Stage 3: `law_changes` from the law changes file, and `scenarios` once the FA questions arrive.
-5. Lecture 3 (28 Oct), already in `course-code-hub`: agent, MCP tools, memory, evaluation, serving (Stage 6).
-6. PR #2 is waiting for a review.
+1. Set up the Databricks VS Code extension with profile `llmops-course` and run something from it.
+2. Email FA contacts for past quiz questions as CSV, with permission to use them. Ask for: question_id, question,
+   options, correct_answer, explanation, law_reference, season. Recheck older seasons against the 2026/27 changes.
+3. Get PR #2 (weeks 1–2) and the week 2 PR reviewed; retarget the week 2 PR to `main` once #2 merges.
+4. Retrieval follow-ups from `retrieval_experiment.html`: hybrid search with `websearch_to_tsquery` or key terms, and
+   section chunks with a lower word limit so long blocks like DOGSO are split.
+5. Stage 3: `law_changes` from the law changes file, and `scenarios` once the FA questions arrive.
+6. Lecture 3 (28 Oct), already in `course-code-hub`: agent, MCP tools, memory, evaluation, serving (Stage 6).
 
 **Done so far:**
 
@@ -38,6 +33,10 @@ Architecture: https://claude.ai/artifact/4UzwdQTspMLCQMTsc8ci8L
   retrieval: 2 right, 1 right with a made-up quote, 2 wrong (old goalkeeper rule, invented page). Results in
   `gateway_experiment.html`.
 - Databricks Connect works from the venv on serverless (`laws` read from VS Code's environment).
+- Week 2 (branch `week2`): lecture 2 config (`databricks-gte-large-en`, `lakebase_project_id`); a fixed-size
+  chunking alternative (`laws_chunks_fixed`, 261 chunks) beside the section chunks (138); both embedded and synced to
+  Lakebase (`SNAPSHOT`, no Change Data Feed); semantic, filtered and hybrid search compared in
+  `retrieval_experiment.html` (fixed chunks 5/5 everywhere; section chunks 4/5 semantic, 5/5 filtered by Law).
 
 ## Stage 1: get the PDF into Databricks and parse it
 
@@ -103,21 +102,23 @@ kick" (p119) and disciplinary action is 12.4. Law 6 has no section 6: the signal
 
 **Done when:** every scenario has a decision, a restart, a sanction and a reference to a law section.
 
-## Stage 4: embeddings in Lakebase
+## Stage 4: embeddings and search in Lakebase
 
-**To revisit after lecture 2:** the course now uses Databricks AI Search and Lakebase synced tables, with
-`databricks-gte-large-en` for embeddings. Follow the lecture rather than the steps below.
-
-1. Create a database in `lb-llmops-adambuckleyjones` and run `CREATE EXTENSION vector`.
-2. Embed `laws_chunks` and `scenarios` with `gateway.embed` and upsert them into `laws_chunk_vectors` and
-   `scenario_vectors`, both `vector(1024)` with an HNSW index.
+1. Embed `laws_chunks` (and the alternative `laws_chunks_fixed`) with `databricks-gte-large-en` via `ai_query`, with
+   `id` as the primary key.
+2. Sync both to Lakebase as synced tables (`notebooks/5_synced_tables.py`, `SNAPSHOT`), with pgvector, an HNSW
+   cosine index and a GIN full-text index.
+3. Search them with `src/referee_ai/vector_search.py`: semantic, filtered by Law, hybrid.
 
 **Done when:** the query "handball on goal line" returns Law 12 sections in its top 3 results.
 
+**Status (24 Oct): done, on `week2`.** 138 and 261 rows synced, counts match Delta. Results in
+`retrieval_experiment.html`. `scenarios` will be embedded the same way in Stage 3.
+
 ## Stage 5: make it reproducible
 
-1. Bundle job `laws_ingest` (`resources/laws_ingest.job.yml`): parse, then split, from the volume. Add the embedding
-   step from Stage 4 when it exists. Uploading the split PDFs stays a manual one-off step.
+1. Bundle job `laws_ingest` (`resources/laws_ingest.job.yml`): parse, split and embed, then sync to Lakebase.
+   Uploading the split PDFs stays a manual one-off step.
 2. Rebuild everything from an empty schema:
 
    ```bash
@@ -127,8 +128,7 @@ kick" (p119) and disciplinary action is 12.4. Law 6 has no section 6: the signal
 
 **Done when:** the job rebuilds all tables and vectors from the PDFs in the volume.
 
-**Status (23 Oct): partly done, in PR #2.** The job runs parse and split on dev (86 sections, 138 chunks); the
-embedding step is still to add.
+**Status (24 Oct): done.** The job runs parse, split with embeddings, and the Lakebase sync on dev.
 
 ## Later stages
 
