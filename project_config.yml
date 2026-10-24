@@ -13,11 +13,12 @@ dev:
   schema: "adambuckleyjones"
   volume: "laws_files"
   llm_endpoint: "course_ops.gateway.chat"
-  embedding_endpoint: "course_ops.gateway.embed"
+  # course_ops.gateway.embed can't be used: ai_query doesn't support custom Unity Gateway model services yet
+  embedding_endpoint: "databricks-gte-large-en"
   warehouse_id: "e9cda9338abe31cc"
   experiment_path: "/llmops/adambuckleyjones-dev"
   # Your provisioned Lakebase project.
-  lakebase_instance: "lb-llmops-adambuckleyjones"
+  lakebase_project_id: "lb-llmops-adambuckleyjones"
 
 # Acceptance: your schema in the acceptance catalog, written by your deploys; you read it.
 acc:
@@ -25,11 +26,12 @@ acc:
   schema: "adambuckleyjones"
   volume: "laws_files"
   llm_endpoint: "course_ops.gateway.chat"
-  embedding_endpoint: "course_ops.gateway.embed"
+  # course_ops.gateway.embed can't be used: ai_query doesn't support custom Unity Gateway model services yet
+  embedding_endpoint: "databricks-gte-large-en"
   warehouse_id: "e9cda9338abe31cc"
   experiment_path: "/llmops/adambuckleyjones-acc"
   # Your provisioned Lakebase project for this environment.
-  lakebase_instance: "lb-llmops-adambuckleyjones"
+  lakebase_project_id: "lb-llmops-adambuckleyjones"
 
 # Production: your schema in the production catalog, written by your deploys; you read it.
 prd:
@@ -37,8 +39,9 @@ prd:
   schema: "adambuckleyjones"
   volume: "laws_files"
   llm_endpoint: "course_ops.gateway.chat"
-  embedding_endpoint: "course_ops.gateway.embed"
+  # course_ops.gateway.embed can't be used: ai_query doesn't support custom Unity Gateway model services yet
+  embedding_endpoint: "databricks-gte-large-en"
   warehouse_id: "e9cda9338abe31cc"
   experiment_path: "/llmops/adambuckleyjones-prd"
   # Your provisioned Lakebase project for this environment.
-  lakebase_instance: "lb-llmops-adambuckleyjones"
+  lakebase_project_id: "lb-llmops-adambuckleyjones"
