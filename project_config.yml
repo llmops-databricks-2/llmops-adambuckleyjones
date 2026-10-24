@@ -11,34 +11,37 @@ usage_policy_id: "6bc3dda5-d72e-3084-9c1c-29a87a79fa27"
 dev:
   catalog: "llmops_dev"
   schema: "adambuckleyjones"
-  volume: "arxiv_files"
+  volume: "laws_files"
   llm_endpoint: "course_ops.gateway.chat"
-  embedding_endpoint: "course_ops.gateway.embed"
+  # course_ops.gateway.embed can't be used: ai_query doesn't support custom Unity Gateway model services yet
+  embedding_endpoint: "databricks-gte-large-en"
   warehouse_id: "e9cda9338abe31cc"
   experiment_path: "/llmops/adambuckleyjones-dev"
   # Your provisioned Lakebase project.
-  lakebase_instance: "lb-llmops-adambuckleyjones"
+  lakebase_project_id: "lb-llmops-adambuckleyjones"
 
 # Acceptance: your schema in the acceptance catalog, written by your deploys; you read it.
 acc:
   catalog: "llmops_acc"
   schema: "adambuckleyjones"
-  volume: "arxiv_files"
+  volume: "laws_files"
   llm_endpoint: "course_ops.gateway.chat"
-  embedding_endpoint: "course_ops.gateway.embed"
+  # course_ops.gateway.embed can't be used: ai_query doesn't support custom Unity Gateway model services yet
+  embedding_endpoint: "databricks-gte-large-en"
   warehouse_id: "e9cda9338abe31cc"
   experiment_path: "/llmops/adambuckleyjones-acc"
   # Your provisioned Lakebase project for this environment.
-  lakebase_instance: "lb-llmops-adambuckleyjones"
+  lakebase_project_id: "lb-llmops-adambuckleyjones"
 
 # Production: your schema in the production catalog, written by your deploys; you read it.
 prd:
   catalog: "llmops_prd"
   schema: "adambuckleyjones"
-  volume: "arxiv_files"
+  volume: "laws_files"
   llm_endpoint: "course_ops.gateway.chat"
-  embedding_endpoint: "course_ops.gateway.embed"
+  # course_ops.gateway.embed can't be used: ai_query doesn't support custom Unity Gateway model services yet
+  embedding_endpoint: "databricks-gte-large-en"
   warehouse_id: "e9cda9338abe31cc"
   experiment_path: "/llmops/adambuckleyjones-prd"
   # Your provisioned Lakebase project for this environment.
-  lakebase_instance: "lb-llmops-adambuckleyjones"
+  lakebase_project_id: "lb-llmops-adambuckleyjones"
