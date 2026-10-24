@@ -2,7 +2,7 @@
 
 import pytest
 
-from referee_ai.laws_processor import chunk_section, clean_text, split_sections, table_to_text
+from referee_ai.laws_processor import chunk_section, clean_text, fixed_size_chunks, split_sections, table_to_text
 
 FILE = "law_12_fouls_and_misconduct.pdf"
 PAGE_MAP = {(FILE, 0): 115, (FILE, 1): 116, (FILE, 2): 118}
@@ -104,3 +104,17 @@ def test_missing_page_in_map_fails() -> None:
     """A page missing from page_map.csv is an error, so no chunk is stored without its original page."""
     with pytest.raises(KeyError):
         split_sections(FILE, ELEMENTS, {(FILE, 0): 115})
+
+
+def test_fixed_size_chunks_overlap_and_cite_pages() -> None:
+    """Fixed windows overlap, keep the section heading, and cite the pages their characters come from."""
+    section = split_sections(FILE, ELEMENTS, PAGE_MAP)[1]
+    chunks = fixed_size_chunks(section, size=60, overlap=10)
+    bodies = [c.text.split("\n\n", 1)[1] for c in chunks]
+
+    assert all(c.text.startswith("Law 12 Fouls and Misconduct, 12.1 Direct free kick\n\n") for c in chunks)
+    assert all(len(body) <= 60 for body in bodies)
+    assert bodies[0][-10:] == bodies[1][:10]
+    assert chunks[0].pages == [115]
+    assert chunks[-1].pages == [116]
+    assert [c.chunk_id for c in chunks][:2] == ["12.1-f0", "12.1-f1"]

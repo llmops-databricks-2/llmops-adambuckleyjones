@@ -6,6 +6,7 @@ laws_parsed (one ai_parse_document result per Law file)
 Section (one per numbered section, e.g. Law 12.4)      -> laws table
    ↓ chunk_section: one chunk per subheading block, long blocks split by paragraph
 Chunk (text prefixed with its law and section)          -> laws_chunks table
+   (alternative: fixed_size_chunks, fixed character windows with overlap -> laws_chunks_fixed)
 
 Page numbers are mapped back to the full Laws of the Game with page_map.csv, so every section and chunk can cite
 the original pages.
@@ -20,6 +21,8 @@ LAW_FILE = re.compile(r"law_(\d{2})_")
 SKIPPED_TYPES = {"page_header", "page_footer", "page_number", "figure", "caption"}
 MAX_SUBHEADING_WORDS = 12
 MAX_CHUNK_WORDS = 400
+FIXED_CHUNK_CHARS = 500
+FIXED_CHUNK_OVERLAP = 50
 
 
 @dataclass
@@ -46,17 +49,26 @@ class Section:
         """Original pages the section appears on."""
         return sorted({part.page for part in self.parts})
 
-    @property
-    def text(self) -> str:
-        """Section text, with each subheading on its own line before its text."""
-        lines, subheading = [], None
+    def blocks(self) -> list[tuple[str, int]]:
+        """Text blocks with their original page: each subheading on its own before its text."""
+        blocks, subheading = [], None
         for part in self.parts:
             if part.subheading != subheading:
                 subheading = part.subheading
                 if subheading:
-                    lines.append(subheading)
-            lines.append(part.text)
-        return "\n\n".join(lines)
+                    blocks.append((subheading, part.page))
+            blocks.append((part.text, part.page))
+        return blocks
+
+    @property
+    def text(self) -> str:
+        """Section text, with each subheading on its own line before its text."""
+        return "\n\n".join(text for text, _ in self.blocks())
+
+    @property
+    def heading(self) -> str:
+        """Prefix for chunks of this section, e.g. 'Law 12 Fouls and Misconduct, 12.4 Disciplinary action'."""
+        return f"Law {self.law_number} {self.law_title}, {self.section} {self.section_title}"
 
 
 @dataclass
@@ -176,7 +188,7 @@ def chunk_section(section: Section, max_words: int = MAX_CHUNK_WORDS) -> list[Ch
             pieces[-1].append((paragraph, page))
 
         for piece in pieces:
-            heading = f"Law {section.law_number} {section.law_title}, {section.section} {section.section_title}"
+            heading = section.heading
             if subheading:
                 heading = f"{heading}, {subheading}"
             body = "\n\n".join(text for text, _ in piece)
@@ -192,4 +204,40 @@ def chunk_section(section: Section, max_words: int = MAX_CHUNK_WORDS) -> list[Ch
                     pages=sorted({page for _, page in piece}),
                 )
             )
+    return chunks
+
+
+def fixed_size_chunks(
+    section: Section, size: int = FIXED_CHUNK_CHARS, overlap: int = FIXED_CHUNK_OVERLAP
+) -> list[Chunk]:
+    """Cut a section into windows of `size` characters that overlap by `overlap`, ignoring subheadings and sentences.
+
+    The alternative to chunk_section, for comparison. Each chunk keeps the section heading as prefix and cites the
+    original pages its characters come from.
+    """
+    text, spans = "", []
+    for block, page in section.blocks():
+        text += "\n\n" if text else ""
+        spans.append((len(text), len(text) + len(block), page))
+        text += block
+
+    chunks: list[Chunk] = []
+    start = 0
+    while start < len(text):
+        end = min(start + size, len(text))
+        chunks.append(
+            Chunk(
+                chunk_id=f"{section.section}-f{len(chunks)}",
+                law_number=section.law_number,
+                law_title=section.law_title,
+                section=section.section,
+                section_title=section.section_title,
+                subheading=None,
+                text=f"{section.heading}\n\n{text[start:end]}",
+                pages=sorted({page for first, last, page in spans if first < end and last > start}),
+            )
+        )
+        if end == len(text):
+            break
+        start = end - overlap
     return chunks
