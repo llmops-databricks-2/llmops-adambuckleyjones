@@ -86,9 +86,10 @@ class LakebasePgVectorManager:
         sql = f"""
             SELECT {RESULT_COLUMNS}, 1 - (embedding <=> %s::vector) AS score
             FROM {self.table_name} {where}
-            ORDER BY score DESC LIMIT %s
+            ORDER BY embedding <=> %s::vector LIMIT %s
         """
-        return self._fetch(sql, [*params, num_results])
+        # Ordering by the raw distance operator, not the derived score, is what lets Postgres use the HNSW index.
+        return self._fetch(sql, [*params, vector, num_results])
 
     def hybrid_search(
         self, query: str, num_results: int = 5, law_number: int | None = None, vector_weight: float = 0.7

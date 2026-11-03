@@ -5,16 +5,26 @@ Stages 1–5 are the week 2 data work (due 21 Oct); stages 6–9 follow the cour
 
 Architecture: https://claude.ai/artifact/4UzwdQTspMLCQMTsc8ci8L
 
-## Next steps (24 Oct)
+## Next steps (28 Oct)
 
-1. Set up the Databricks VS Code extension with profile `llmops-course` and run something from it.
-2. Email FA contacts for past quiz questions as CSV, with permission to use them. Ask for: question_id, question,
-   options, correct_answer, explanation, law_reference, season. Recheck older seasons against the 2026/27 changes.
-3. Get PR #2 (weeks 1–2) and the week 2 PR reviewed; retarget the week 2 PR to `main` once #2 merges.
-4. Retrieval follow-ups from `retrieval_experiment.html`: hybrid search with `websearch_to_tsquery` or key terms, and
-   section chunks with a lower word limit so long blocks like DOGSO are split.
+1. Lecture 3 (28 Oct, in progress), already in `course-code-hub`: MCP tool calling and agent orchestration, then
+   memory, evaluation and serving (Stage 6). `LakebasePgVectorManager.search` is the first retrieval tool.
+2. PR #2 is with Basak for review, posted on Discord on 28 Oct at 9am. It holds weeks 1 and 2 together, as Maria
+   allowed because week 1 was late. Week 3 gets its own PR again, on a `week3` branch from `main` once #2 merges.
+3. Email FA contacts for past Laws of the Game exam questions as Excel or CSV, last season (2025/26) and this season
+   so far, with permission to use them (draft written 28 Oct). Ask for: question_id, question, options,
+   correct_answer, explanation, law_reference, season. Recheck older seasons against the 2026/27 changes. Keep the
+   file in the volume, out of git.
+4. Retrieval follow-ups from `retrieval_experiment.html`: hybrid search with `websearch_to_tsquery` or key terms.
+   `MAX_CHUNK_WORDS` stays at 400 (an untuned guess, sized for a 512-token model; GTE takes 8,192). Tried 200 on
+   28 Oct: 168 section chunks, same hit rates, the DOGSO handball question still misses 12.4. Sweep 100/200/400 once
+   the FA questions give a bigger eval set; five questions can't separate them.
 5. Stage 3: `law_changes` from the law changes file, and `scenarios` once the FA questions arrive.
-6. Lecture 3 (28 Oct), already in `course-code-hub`: agent, MCP tools, memory, evaluation, serving (Stage 6).
+6. Not committed yet (28 Oct): `search` now orders by `embedding <=> query`, so Postgres uses the HNSW index (checked
+   with `EXPLAIN`; same results and hit rates); the Stage 4 check and the notes above.
+7. `synced_tables` crashed once on 24 Oct while importing `psycopg` (SIGABRT loading `psycopg-binary`), then passed
+   on repair and on three runs since. Add `max_retries: 1` to the task if it happens again.
+8. Set up the Databricks VS Code extension with profile `llmops-course` and run something from it.
 
 **Done so far:**
 
@@ -33,7 +43,7 @@ Architecture: https://claude.ai/artifact/4UzwdQTspMLCQMTsc8ci8L
   retrieval: 2 right, 1 right with a made-up quote, 2 wrong (old goalkeeper rule, invented page). Results in
   `gateway_experiment.html`.
 - Databricks Connect works from the venv on serverless (`laws` read from VS Code's environment).
-- Week 2 (branch `week2`): lecture 2 config (`databricks-gte-large-en`, `lakebase_project_id`); a fixed-size
+- Week 2 (in PR #2): lecture 2 config (`databricks-gte-large-en`, `lakebase_project_id`); a fixed-size
   chunking alternative (`laws_chunks_fixed`, 261 chunks) beside the section chunks (138); both embedded and synced to
   Lakebase (`SNAPSHOT`, no Change Data Feed); semantic, filtered and hybrid search compared in
   `retrieval_experiment.html` (fixed chunks 5/5 everywhere; section chunks 4/5 semantic, 5/5 filtered by Law).
@@ -110,10 +120,14 @@ kick" (p119) and disciplinary action is 12.4. Law 6 has no section 6: the signal
    cosine index and a GIN full-text index.
 3. Search them with `src/referee_ai/vector_search.py`: semantic, filtered by Law, hybrid.
 
-**Done when:** the query "handball on goal line" returns Law 12 sections in its top 3 results.
+**Done when:** both chunk tables are synced and indexed, and `notebooks/6_search_experiment.py` finds the expected
+section in the top 3 for at least 4 of its 5 referee questions, with semantic search, on both tables.
 
-**Status (24 Oct): done, on `week2`.** 138 and 261 rows synced, counts match Delta. Results in
+**Status (24 Oct): done, in PR #2.** 138 and 261 rows synced, counts match Delta. Results in
 `retrieval_experiment.html`. `scenarios` will be embedded the same way in Stage 3.
+The earlier check, the query "handball on goal line", fails for section chunks (28 Oct): Law 1.10 and Law 16 rank
+first on "goal line"; the first Law 12 chunk is 7th, 0.025 behind. Fixed chunks pass (`12.4-f15` 2nd). Same weakness
+as the DOGSO miss: long section chunks dilute one specific sentence. Revisit with re-ranking and the FA eval set.
 
 ## Stage 5: make it reproducible
 
