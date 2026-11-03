@@ -1,6 +1,8 @@
 # The Laws ingest job: parses the split Laws PDFs in the laws_files volume into laws_parsed, then splits them into
 # the laws and chunk tables of your schema in the target's catalog (dev: llmops_dev.adambuckleyjones), and syncs the
-# chunk tables to Lakebase for search.
+# chunk tables to Lakebase for search. The sync and the table comments are their own jobs (synced_tables,
+# table_comments), so each can also be run on its own; this job runs both after the split, as the rebuild can drop
+# the comments.
 # The Laws are static, so there is no schedule: run it once per edition, after uploading the split PDFs and
 # page_map.csv made by scripts/split_laws.py.
 resources:
@@ -35,8 +37,11 @@ resources:
         - task_key: synced_tables
           depends_on:
             - task_key: split_sections
-          environment_key: default
-          notebook_task:
-            notebook_path: ../notebooks/5_synced_tables.py
-            base_parameters:
-              env: ${bundle.target}
+          run_job_task:
+            job_id: ${resources.jobs.synced_tables.id}
+
+        - task_key: table_comments
+          depends_on:
+            - task_key: split_sections
+          run_job_task:
+            job_id: ${resources.jobs.table_comments.id}
