@@ -21,6 +21,7 @@ import json
 
 from databricks.sdk import WorkspaceClient
 from databricks.sdk.runtime import dbutils
+from loguru import logger
 
 from referee_ai.config import load_config
 from referee_ai.vector_search import LakebasePgVectorManager
@@ -72,7 +73,9 @@ for chunking, table in TABLES.items():
                     ],
                 }
             )
-            print(f"{chunking:7} {method:8} {'HIT ' if results[-1]['hit'] else 'miss'} {question[:60]} -> {sections}")
+            logger.info(
+                f"{chunking:7} {method:8} {'HIT ' if results[-1]['hit'] else 'miss'} {question[:60]} -> {sections}"
+            )
 
 # COMMAND ----------
 
@@ -81,7 +84,7 @@ for chunking in TABLES:
     for method in ("semantic", "filtered", "hybrid"):
         hits = [r["hit"] for r in results if r["chunking"] == chunking and r["method"] == method]
         hit_rates[f"{chunking}/{method}"] = f"{sum(hits)}/{len(hits)}"
-print(hit_rates)
+logger.info(f"Hit rates: {hit_rates}")
 
 # COMMAND ----------
 

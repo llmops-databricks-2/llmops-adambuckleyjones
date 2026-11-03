@@ -19,6 +19,7 @@ import time
 
 from databricks.sdk import WorkspaceClient
 from databricks.sdk.runtime import dbutils
+from loguru import logger
 from openai import OpenAI
 
 from referee_ai.config import load_config
@@ -63,7 +64,7 @@ for prompt in PROMPTS:
             "latency_s": round(time.perf_counter() - start, 2),
         }
     )
-    print(f"Q: {prompt}\nA: {results[-1]['answer']}\n{results[-1]['total_tokens']} tokens\n")
+    logger.info(f"Q: {prompt}\nA: {results[-1]['answer']}\n{results[-1]['total_tokens']} tokens\n")
 
 # COMMAND ----------
 

@@ -31,6 +31,7 @@ from databricks.sdk.service.postgres import (
     SyncedTableSyncedTableSpecSyncedTableSchedulingPolicy,
     SyncedTableSyncedTableSpecTypeOverride,
 )
+from loguru import logger
 from pyspark.sql import SparkSession
 
 from referee_ai.config import load_config
@@ -61,7 +62,7 @@ def sync(source: str, target: str) -> None:
     try:
         pipeline_id = w.postgres.get_synced_table(name=name).status.pipeline_id
         update_id = w.pipelines.start_update(pipeline_id=pipeline_id).update_id
-        print(f"{target}: snapshot started, update {update_id}")
+        logger.info(f"{target}: snapshot started, update {update_id}")
     except NotFound:
         w.postgres.create_synced_table(
             synced_table=SyncedTable(
@@ -86,7 +87,7 @@ def sync(source: str, target: str) -> None:
             ),
             synced_table_id=full_target,
         ).wait()
-        print(f"{target}: created")
+        logger.info(f"{target}: created")
 
     while True:
         status = w.postgres.get_synced_table(name=name).status
@@ -100,9 +101,9 @@ def sync(source: str, target: str) -> None:
             break
         if status.detailed_state in FAILED:
             raise RuntimeError(f"{target}: {status.detailed_state} | {status.message}")
-        print(f"{target}: waiting, {status.detailed_state}")
+        logger.info(f"{target}: waiting, {status.detailed_state}")
         time.sleep(30)
-    print(f"{target}: up to date")
+    logger.info(f"{target}: up to date")
 
 
 for source, target in SOURCES.items():
@@ -127,7 +128,7 @@ for source, target in SOURCES.items():
         "embedding_type": str(embedding_type),
         "indexes": [index[0] for index in indexes],
     }
-    print(target, summary[target])
+    logger.info(f"{target}: {summary[target]}")
 
 # COMMAND ----------
 

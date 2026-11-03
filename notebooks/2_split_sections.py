@@ -20,6 +20,7 @@
 import json
 
 from databricks.sdk.runtime import dbutils
+from loguru import logger
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql.functions import col, expr
 
@@ -52,7 +53,7 @@ for row in parsed:
         sections.extend(split_sections(file_name, json.loads(row["doc"])["document"]["elements"], page_map))
 chunks = [chunk for section in sections for chunk in chunk_section(section)]
 fixed_chunks = [chunk for section in sections for chunk in fixed_size_chunks(section)]
-print(f"{len(sections)} sections, {len(chunks)} chunks, {len(fixed_chunks)} fixed-size chunks")
+logger.info(f"{len(sections)} sections, {len(chunks)} chunks, {len(fixed_chunks)} fixed-size chunks")
 
 # COMMAND ----------
 
@@ -86,7 +87,7 @@ for table, chunk_list in ((chunks_table, chunks), (fixed_table, fixed_chunks)):
 
 for table in (laws_table, chunks_table, fixed_table):
     df = spark.table(table)
-    print(f"{table}: {df.count()} rows")
+    logger.info(f"{table}: {df.count()} rows")
     df.printSchema()
     df.drop("embedding").orderBy("law_number", "section").show(5, truncate=80)
 

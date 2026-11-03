@@ -16,6 +16,7 @@
 import json
 
 from databricks.sdk.runtime import dbutils
+from loguru import logger
 from pyspark.sql import SparkSession
 
 from referee_ai.config import load_config
@@ -55,7 +56,7 @@ spark.sql(f"""
 
 for table in ("laws", "laws_chunks", "laws_chunks_fixed"):
     df = spark.table(f"{schema}.{table}")
-    print(f"{table}: {df.count()} rows")
+    logger.info(f"{table}: {df.count()} rows")
     df.printSchema()
     df.drop("embedding").orderBy("law_number", "section").show(3, truncate=100)
 

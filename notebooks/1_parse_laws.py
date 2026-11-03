@@ -13,6 +13,7 @@
 # COMMAND ----------
 
 from databricks.sdk.runtime import dbutils
+from loguru import logger
 from pyspark.sql import SparkSession
 
 from referee_ai.config import load_config
@@ -33,7 +34,7 @@ spark.sql(f"""
     SELECT path, ai_parse_document(content) AS parsed, current_timestamp() AS parsed_at
     FROM READ_FILES('{raw_dir}', format => 'binaryFile')
 """)
-print(f"Parsed {raw_dir} into {parsed_table}")
+logger.info(f"Parsed {raw_dir} into {parsed_table}")
 
 # COMMAND ----------
 
