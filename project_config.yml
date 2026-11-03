@@ -1,5 +1,7 @@
 # Project configuration for the LLMOps course, filled in for you at onboarding.
 # Resources are provisioned at onboarding except the volume, which you create during the course.
+# embedding_endpoint is the serving endpoint for ai_query, AI Search and DatabricksServingEndpoint;
+# embedding_service is the AI Gateway model service for the OpenAI client (README.md).
 
 # Your usage policy: set it on every serverless job, endpoint and app you create.
 usage_policy_id: "6bc3dda5-d72e-3084-9c1c-29a87a79fa27"
@@ -13,8 +15,9 @@ dev:
   schema: "adambuckleyjones"
   volume: "arxiv_files"
   llm_endpoint: "course_ops.gateway.chat"
-  embedding_endpoint: "course_ops.gateway.embed"
-  warehouse_id: "e9cda9338abe31cc"
+  embedding_endpoint: "databricks-gte-large-en"
+  embedding_service: "course_ops.gateway.embed"
+  warehouse_id: "76f04e49e6e5788b"
   experiment_path: "/llmops/adambuckleyjones-dev"
   # Your provisioned Lakebase project.
   lakebase_instance: "lb-llmops-adambuckleyjones"
@@ -25,8 +28,9 @@ acc:
   schema: "adambuckleyjones"
   volume: "arxiv_files"
   llm_endpoint: "course_ops.gateway.chat"
-  embedding_endpoint: "course_ops.gateway.embed"
-  warehouse_id: "e9cda9338abe31cc"
+  embedding_endpoint: "databricks-gte-large-en"
+  embedding_service: "course_ops.gateway.embed"
+  warehouse_id: "76f04e49e6e5788b"
   experiment_path: "/llmops/adambuckleyjones-acc"
   # Your provisioned Lakebase project for this environment.
   lakebase_instance: "lb-llmops-adambuckleyjones"
@@ -37,8 +41,9 @@ prd:
   schema: "adambuckleyjones"
   volume: "arxiv_files"
   llm_endpoint: "course_ops.gateway.chat"
-  embedding_endpoint: "course_ops.gateway.embed"
-  warehouse_id: "e9cda9338abe31cc"
+  embedding_endpoint: "databricks-gte-large-en"
+  embedding_service: "course_ops.gateway.embed"
+  warehouse_id: "76f04e49e6e5788b"
   experiment_path: "/llmops/adambuckleyjones-prd"
   # Your provisioned Lakebase project for this environment.
   lakebase_instance: "lb-llmops-adambuckleyjones"
