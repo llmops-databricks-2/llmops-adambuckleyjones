@@ -1,4 +1,4 @@
-"""Configuration management for Arxiv Curator."""
+"""Configuration management for Referee AI."""
 
 import os
 from pathlib import Path
@@ -20,6 +20,8 @@ class ProjectConfig(BaseModel):
     embedding_service: str = Field(..., description="AI Gateway embedding model service name for the OpenAI client")
     experiment_path: str = Field(..., description="MLflow experiment path for this environment")
     warehouse_id: str = Field(..., description="Warehouse ID")
+    lakebase_project_id: str = Field(..., description="Lakebase project ID")
+    usage_policy_id: str | None = Field(None, description="Usage policy ID for serverless jobs and pipelines")
     genie_space_id: str | None = Field(None, description="Genie space ID for MCP integration")
     system_prompt: str = Field(
         default="You are a helpful AI assistant that helps users find and understand research papers.",
@@ -49,7 +51,10 @@ class ProjectConfig(BaseModel):
         if env not in config_data:
             raise ValueError(f"Environment '{env}' not found in config file")
 
-        return cls(**config_data[env])
+        env_config = config_data[env]
+        if "usage_policy_id" in config_data:
+            env_config["usage_policy_id"] = config_data["usage_policy_id"]
+        return cls(**env_config)
 
     @property
     def schema(self) -> str:

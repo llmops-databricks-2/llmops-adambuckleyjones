@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Retrieval Experiment</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Source+Sans+3:wght@400;600&family=JetBrains+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: one reading column; size and hit-rate tables first, then what changed, then one block per question. Same tokens as gateway_experiment.html. */
+:root {
+  --bg: #f5f6f2; --surface: #ffffff; --code: #eef1ec; --fg: #19201b; --muted: #5b655e; --line: #d3d9d1; --accent: #1d6a43;
+  --ok: #1d6a43; --ok-bg: #e2f0e7; --part: #8a5a00; --part-bg: #f7ecd4; --bad: #a3322a; --bad-bg: #f7e1de;
+  --display: "Barlow Condensed", "Arial Narrow", sans-serif; --body: "Source Sans 3", system-ui, sans-serif; --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121714; --surface: #1a211c; --code: #0f1411; --fg: #e4e9e4; --muted: #9ba69e; --line: #333d36; --accent: #6cc196;
+    --ok: #7fd0a5; --ok-bg: #1b3326; --part: #e3b866; --part-bg: #3a2e17; --bad: #f0958b; --bad-bg: #3d1e1b; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121714; --surface: #1a211c; --code: #0f1411; --fg: #e4e9e4; --muted: #9ba69e; --line: #333d36; --accent: #6cc196;
+  --ok: #7fd0a5; --ok-bg: #1b3326; --part: #e3b866; --part-bg: #3a2e17; --bad: #f0958b; --bad-bg: #3d1e1b; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 400 16.5px/1.6 var(--body); }
+.wrap { max-width: 920px; margin: 0 auto; padding-inline: 16px; padding-block: 40px 72px; display: grid; gap: 32px; }
+header, section { display: grid; gap: 12px; }
+.eyebrow { font: 600 12.5px/1 var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--accent); }
+h1 { font: 700 clamp(34px, 7vw, 50px)/1.02 var(--display); margin: 0; text-wrap: balance; }
+h2 { font: 700 28px/1.1 var(--display); margin: 0; }
+h3 { font: 600 17px/1.35 var(--body); margin: 0; text-wrap: balance; }
+p { margin: 0; }
+a { color: var(--accent); text-underline-offset: 3px; }
+code { font: 500 .86em var(--mono); background: var(--code); border-radius: 4px; padding: 1px 5px; }
+.lede { color: var(--muted); max-width: 68ch; }
+.facts { display: flex; flex-wrap: wrap; gap: 6px 20px; font-size: 14.5px; color: var(--muted); }
+.facts b { color: var(--fg); font-weight: 600; }
+.tbl { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 15px; }
+th, td { text-align: left; vertical-align: top; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+th { font: 600 11.5px var(--mono); letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+td.ids { font: 500 13.5px var(--mono); }
+td.ids b { color: var(--accent); }
+.pill { display: inline-block; font: 600 11px/1 var(--mono); letter-spacing: .04em; text-transform: uppercase; border-radius: 999px; padding: 5px 9px; white-space: nowrap; }
+.pill.ok { color: var(--ok); background: var(--ok-bg); }
+.pill.part { color: var(--part); background: var(--part-bg); }
+.pill.bad { color: var(--bad); background: var(--bad-bg); }
+.q { padding-top: 22px; border-top: 1px solid var(--line); }
+.qhead { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: baseline; justify-content: space-between; }
+.exp { font: 600 12px var(--mono); color: var(--muted); white-space: nowrap; }
+ul { margin: 0; padding-left: 20px; display: grid; gap: 8px; max-width: 72ch; }
+footer { color: var(--muted); font-size: 14px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">LLMOps course project · Referee AI · week 2</div>
+    <h1>Retrieval experiment</h1>
+    <p class="lede">Two chunking strategies for the Laws of the Game 2026/27, synced to Lakebase and searched three ways with five referee questions whose answer section is known. A search is a hit when the expected section is in the top 3.</p>
+    <div class="facts">
+      <span>Embeddings <b>databricks-gte-large-en, 1024-d</b></span>
+      <span>Store <b>Lakebase synced tables, SNAPSHOT</b></span>
+      <span>Indexes <b>HNSW cosine, GIN full text</b></span>
+      <span>Runs <a href="https://dbc-88df4c2c-4033.cloud.databricks.com/?o=7474648231747660#job/499191740026962/run/904350493558786">Chunk review</a> · <a href="https://dbc-88df4c2c-4033.cloud.databricks.com/?o=7474648231747660#job/335069251447043/run/35358921132908">Synced tables</a> · <a href="https://dbc-88df4c2c-4033.cloud.databricks.com/?o=7474648231747660#job/540571376528652/run/785560869593854">Search experiment</a></span>
+    </div>
+  </header>
+
+  <section>
+    <h2>Chunk sizes</h2>
+    <div class="tbl"><table>
+      <thead><tr><th>Strategy</th><th class="num">Chunks</th><th class="num">Min chars</th><th class="num">Median</th><th class="num">Max</th><th class="num">Avg tokens</th><th class="num">&gt;512 tokens</th><th class="num">&lt;30 words</th></tr></thead>
+      <tbody>
+<tr><td>Section and subheading<br><code>laws_chunks</code></td><td class="num">138</td><td class="num">101</td><td class="num">642</td><td class="num">2251</td><td class="num">200</td><td class="num">2</td><td class="num">6</td></tr>
+<tr><td>Fixed 500 chars, 50 overlap<br><code>laws_chunks_fixed</code></td><td class="num">261</td><td class="num">119</td><td class="num">547</td><td class="num">579</td><td class="num">120</td><td class="num">0</td><td class="num">15</td></tr>
+      </tbody>
+    </table></div>
+    <p class="lede">Tokens are estimated at 4 characters each. Both strategies keep chunks under the 512-token range the course recommends for question answering, apart from two long section chunks.</p>
+  </section>
+
+  <section>
+    <h2>Hit rate, top 3</h2>
+    <div class="tbl"><table>
+      <thead><tr><th>Chunks</th><th class="num">Semantic</th><th class="num">Filtered by Law</th><th class="num">Hybrid</th></tr></thead>
+      <tbody>
+<tr><td>Section and subheading</td><td class="num"><span class="pill part">4/5</span></td><td class="num"><span class="pill ok">5/5</span></td><td class="num"><span class="pill part">4/5</span></td></tr>
+<tr><td>Fixed 500 chars, 50 overlap</td><td class="num"><span class="pill ok">5/5</span></td><td class="num"><span class="pill ok">5/5</span></td><td class="num"><span class="pill ok">5/5</span></td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section>
+    <h2>What changed</h2>
+    <ul>
+      <li><strong>Fixed-size chunks found more.</strong> 5/5 with every method, the answer always ranked first. Section chunks missed the goal-line handball question: the DOGSO answer sits in a long chunk (<code>12.4-8</code>) that also covers other sending-off rules, so its embedding matches less closely.</li>
+      <li><strong>Filtering by Law fixed the miss.</strong> Restricting the section search to Law 12 brought <code>12.4-8</code> into the top 3 (third). Filtering needs the Law to be known, for example from the question or a first search.</li>
+      <li><strong>Hybrid changed almost nothing.</strong> <code>plainto_tsquery</code> requires every word of the question, so full-sentence questions score 0 on full text and ranking falls back to the vector score. Only the one-word query "DOGSO" got a text score (0.1). Next: use <code>websearch_to_tsquery</code> with OR terms, or key terms only.</li>
+      <li><strong>The heading prefix helps.</strong> "DOGSO" is a hit for every method because each chunk starts with its law, section and subheading.</li>
+      <li><strong>Trade-off.</strong> Fixed chunks are smaller and more precise, but cut rules mid-sentence and give the model less context per chunk; 261 chunks against 138. A middle option: section chunks with a lower word limit, so long blocks like DOGSO are split.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Per question</h2>
+  </section>
+  <section class="q">
+    <div class="qhead"><h3>A defender deliberately handles the ball on the goal line to stop a goal. What is the sanction?</h3><span class="exp">expected 12.4</span></div>
+    <div class="tbl"><table><thead><tr><th>Chunks</th><th>Method</th><th>Expected</th><th>Top 3 (expected section in bold)</th><th class="num">Top score</th></tr></thead><tbody>
+<tr><td>Section</td><td>semantic</td><td><span class="pill bad">miss</span></td><td class="ids">14.2-3, 12.2-0, 12.1-1</td><td class="num">0.795</td></tr>
+<tr><td>Section</td><td>filtered</td><td><span class="pill ok">#3</span></td><td class="ids">12.2-0, 12.1-1, <b>12.4-8</b></td><td class="num">0.792</td></tr>
+<tr><td>Section</td><td>hybrid</td><td><span class="pill bad">miss</span></td><td class="ids">14.2-3, 12.2-0, 12.1-1</td><td class="num">0.556</td></tr>
+<tr><td>Fixed</td><td>semantic</td><td><span class="pill ok">#1</span></td><td class="ids"><b>12.4-f15</b>, 12.1-f5, 12.2-f1</td><td class="num">0.803</td></tr>
+<tr><td>Fixed</td><td>filtered</td><td><span class="pill ok">#1</span></td><td class="ids"><b>12.4-f15</b>, 12.1-f5, 12.2-f1</td><td class="num">0.803</td></tr>
+<tr><td>Fixed</td><td>hybrid</td><td><span class="pill ok">#1</span></td><td class="ids"><b>12.4-f15</b>, 12.1-f5, 12.2-f1</td><td class="num">0.562</td></tr>
+    </tbody></table></div>
+  </section>
+  <section class="q">
+    <div class="qhead"><h3>DOGSO</h3><span class="exp">expected 12.4</span></div>
+    <div class="tbl"><table><thead><tr><th>Chunks</th><th>Method</th><th>Expected</th><th>Top 3 (expected section in bold)</th><th class="num">Top score</th></tr></thead><tbody>
+<tr><td>Section</td><td>semantic</td><td><span class="pill ok">#1</span></td><td class="ids"><b>12.4-8</b>, 5.6-0, 5.6-1</td><td class="num">0.544</td></tr>
+<tr><td>Section</td><td>filtered</td><td><span class="pill ok">#1</span></td><td class="ids"><b>12.4-8</b>, 12.0-0, <b>12.4-3</b></td><td class="num">0.544</td></tr>
+<tr><td>Section</td><td>hybrid</td><td><span class="pill ok">#1</span></td><td class="ids"><b>12.4-8</b>, 5.6-0, 5.6-1</td><td class="num">0.411</td></tr>
+<tr><td>Fixed</td><td>semantic</td><td><span class="pill ok">#1</span></td><td class="ids"><b>12.4-f17</b>, 5.6-f0, 11.4-f3</td><td class="num">0.607</td></tr>
+<tr><td>Fixed</td><td>filtered</td><td><span class="pill ok">#1</span></td><td class="ids"><b>12.4-f17</b>, 12.5-f6, 12.1-f6</td><td class="num">0.607</td></tr>
+<tr><td>Fixed</td><td>hybrid</td><td><span class="pill ok">#1</span></td><td class="ids"><b>12.4-f17</b>, <b>12.4-f16</b>, 5.6-f0</td><td class="num">0.455</td></tr>
+    </tbody></table></div>
+  </section>
+  <section class="q">
+    <div class="qhead"><h3>What happens if the goalkeeper holds the ball in their hands for too long?</h3><span class="exp">expected 12.3</span></div>
+    <div class="tbl"><table><thead><tr><th>Chunks</th><th>Method</th><th>Expected</th><th>Top 3 (expected section in bold)</th><th class="num">Top score</th></tr></thead><tbody>
+<tr><td>Section</td><td>semantic</td><td><span class="pill ok">#1</span></td><td class="ids"><b>12.3-0</b>, 12.1-1, 14.1-0</td><td class="num">0.704</td></tr>
+<tr><td>Section</td><td>filtered</td><td><span class="pill ok">#1</span></td><td class="ids"><b>12.3-0</b>, 12.1-1, 12.4-4</td><td class="num">0.704</td></tr>
+<tr><td>Section</td><td>hybrid</td><td><span class="pill ok">#1</span></td><td class="ids"><b>12.3-0</b>, 12.1-1, 14.1-0</td><td class="num">0.493</td></tr>
+<tr><td>Fixed</td><td>semantic</td><td><span class="pill ok">#1</span></td><td class="ids"><b>12.3-f1</b>, <b>12.3-f0</b>, 12.1-f5</td><td class="num">0.733</td></tr>
+<tr><td>Fixed</td><td>filtered</td><td><span class="pill ok">#1</span></td><td class="ids"><b>12.3-f1</b>, <b>12.3-f0</b>, 12.1-f5</td><td class="num">0.733</td></tr>
+<tr><td>Fixed</td><td>hybrid</td><td><span class="pill ok">#1</span></td><td class="ids"><b>12.3-f1</b>, <b>12.3-f0</b>, 12.1-f5</td><td class="num">0.513</td></tr>
+    </tbody></table></div>
+  </section>
+  <section class="q">
+    <div class="qhead"><h3>Can a player be penalised for offside when receiving the ball from a throw-in?</h3><span class="exp">expected 11.3</span></div>
+    <div class="tbl"><table><thead><tr><th>Chunks</th><th>Method</th><th>Expected</th><th>Top 3 (expected section in bold)</th><th class="num">Top score</th></tr></thead><tbody>
+<tr><td>Section</td><td>semantic</td><td><span class="pill ok">#1</span></td><td class="ids"><b>11.3-0</b>, 15.2-0, 15.0-0</td><td class="num">0.826</td></tr>
+<tr><td>Section</td><td>filtered</td><td><span class="pill ok">#1</span></td><td class="ids"><b>11.3-0</b>, 11.2-0, 11.2-1</td><td class="num">0.826</td></tr>
+<tr><td>Section</td><td>hybrid</td><td><span class="pill ok">#1</span></td><td class="ids"><b>11.3-0</b>, 15.2-0, 15.0-0</td><td class="num">0.578</td></tr>
+<tr><td>Fixed</td><td>semantic</td><td><span class="pill ok">#1</span></td><td class="ids"><b>11.3-f0</b>, 11.2-f1, 15.0-f0</td><td class="num">0.826</td></tr>
+<tr><td>Fixed</td><td>filtered</td><td><span class="pill ok">#1</span></td><td class="ids"><b>11.3-f0</b>, 11.2-f1, 11.2-f0</td><td class="num">0.826</td></tr>
+<tr><td>Fixed</td><td>hybrid</td><td><span class="pill ok">#1</span></td><td class="ids"><b>11.3-f0</b>, 11.2-f1, 15.0-f0</td><td class="num">0.578</td></tr>
+    </tbody></table></div>
+  </section>
+  <section class="q">
+    <div class="qhead"><h3>How far must opponents be from the ball at a free kick?</h3><span class="exp">expected 13.2</span></div>
+    <div class="tbl"><table><thead><tr><th>Chunks</th><th>Method</th><th>Expected</th><th>Top 3 (expected section in bold)</th><th class="num">Top score</th></tr></thead><tbody>
+<tr><td>Section</td><td>semantic</td><td><span class="pill ok">#1</span></td><td class="ids"><b>13.2-0</b>, 13.3-0, 13.1-0</td><td class="num">0.819</td></tr>
+<tr><td>Section</td><td>filtered</td><td><span class="pill ok">#1</span></td><td class="ids"><b>13.2-0</b>, 13.3-0, 13.1-0</td><td class="num">0.819</td></tr>
+<tr><td>Section</td><td>hybrid</td><td><span class="pill ok">#1</span></td><td class="ids"><b>13.2-0</b>, 13.3-0, 13.1-0</td><td class="num">0.573</td></tr>
+<tr><td>Fixed</td><td>semantic</td><td><span class="pill ok">#1</span></td><td class="ids"><b>13.2-f0</b>, <b>13.2-f2</b>, 13.3-f0</td><td class="num">0.816</td></tr>
+<tr><td>Fixed</td><td>filtered</td><td><span class="pill ok">#1</span></td><td class="ids"><b>13.2-f0</b>, <b>13.2-f2</b>, 13.3-f0</td><td class="num">0.816</td></tr>
+<tr><td>Fixed</td><td>hybrid</td><td><span class="pill ok">#1</span></td><td class="ids"><b>13.2-f0</b>, <b>13.2-f2</b>, 13.3-f0</td><td class="num">0.571</td></tr>
+    </tbody></table></div>
+  </section>
+
+  <footer>Built from the exit values of <code>notebooks/4_chunk_review.py</code> and <code>notebooks/6_search_experiment.py</code>, run on 24 Oct 2026. No credentials are stored in the notebooks or this page.</footer>
+</div>
+</body>
+</html>

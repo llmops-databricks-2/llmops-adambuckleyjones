@@ -1,0 +1,21 @@
+# Syncs laws_chunks and laws_chunks_fixed to Lakebase as synced tables (SNAPSHOT) and indexes them for search.
+# laws_ingest runs this job after each rebuild; run it on its own to refresh the Lakebase copy.
+resources:
+  jobs:
+    synced_tables:
+      name: job-synced-tables-adambuckleyjones-${bundle.target}
+      budget_policy_id: "6bc3dda5-d72e-3084-9c1c-29a87a79fa27"
+      environments:
+        - environment_key: default
+          spec:
+            environment_version: "6"
+            dependencies:
+              - ../dist/*.whl
+
+      tasks:
+        - task_key: synced_tables
+          environment_key: default
+          notebook_task:
+            notebook_path: ../notebooks/5_synced_tables.py
+            base_parameters:
+              env: ${bundle.target}

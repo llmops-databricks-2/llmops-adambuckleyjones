@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Gateway Model Experiment</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Source+Sans+3:wght@400;600&family=JetBrains+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: one reading column; a results table up top, then one block per question comparing the answer with the Laws. Same tokens as plan.html. */
+:root {
+  --bg: #f5f6f2; --surface: #ffffff; --code: #eef1ec; --fg: #19201b; --muted: #5b655e; --line: #d3d9d1; --accent: #1d6a43;
+  --ok: #1d6a43; --ok-bg: #e2f0e7; --part: #8a5a00; --part-bg: #f7ecd4; --bad: #a3322a; --bad-bg: #f7e1de;
+  --display: "Barlow Condensed", "Arial Narrow", sans-serif; --body: "Source Sans 3", system-ui, sans-serif; --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121714; --surface: #1a211c; --code: #0f1411; --fg: #e4e9e4; --muted: #9ba69e; --line: #333d36; --accent: #6cc196;
+    --ok: #7fd0a5; --ok-bg: #1b3326; --part: #e3b866; --part-bg: #3a2e17; --bad: #f0958b; --bad-bg: #3d1e1b; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121714; --surface: #1a211c; --code: #0f1411; --fg: #e4e9e4; --muted: #9ba69e; --line: #333d36; --accent: #6cc196;
+  --ok: #7fd0a5; --ok-bg: #1b3326; --part: #e3b866; --part-bg: #3a2e17; --bad: #f0958b; --bad-bg: #3d1e1b; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 400 16.5px/1.6 var(--body); }
+.wrap { max-width: 900px; margin: 0 auto; padding-inline: 16px; padding-block: 40px 72px; display: grid; gap: 32px; }
+header { display: grid; gap: 10px; }
+.eyebrow { font: 600 12.5px/1 var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--accent); }
+h1 { font: 700 clamp(34px, 7vw, 50px)/1.02 var(--display); margin: 0; text-wrap: balance; }
+h2 { font: 700 28px/1.1 var(--display); margin: 0; }
+h3 { font: 600 17px/1.35 var(--body); margin: 0; text-wrap: balance; }
+p { margin: 0; }
+a { color: var(--accent); text-underline-offset: 3px; }
+code { font: 500 .86em var(--mono); background: var(--code); border-radius: 4px; padding: 1px 5px; }
+.lede { color: var(--muted); max-width: 66ch; }
+.facts { display: flex; flex-wrap: wrap; gap: 6px 20px; font-size: 14.5px; color: var(--muted); }
+.facts b { color: var(--fg); font-weight: 600; }
+.tbl { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 15px; }
+th, td { text-align: left; vertical-align: top; padding: 9px 10px; border-bottom: 1px solid var(--line); }
+th { font: 600 11.5px var(--mono); letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+tfoot td { font-weight: 600; border-bottom: none; }
+.pill { display: inline-block; font: 600 11px/1 var(--mono); letter-spacing: .04em; text-transform: uppercase; border-radius: 999px; padding: 5px 9px; white-space: nowrap; }
+.pill.ok { color: var(--ok); background: var(--ok-bg); }
+.pill.part { color: var(--part); background: var(--part-bg); }
+.pill.bad { color: var(--bad); background: var(--bad-bg); }
+.q { display: grid; gap: 12px; padding-top: 24px; border-top: 1px solid var(--line); }
+.qhead { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: start; }
+.qn { font: 700 26px/1 var(--display); color: var(--accent); }
+.label { font: 600 11.5px/1 var(--mono); letter-spacing: .05em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+.answer pre { margin: 0; background: var(--code); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; font: 400 14px/1.55 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; }
+.ref { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; }
+ul { margin: 0; padding-left: 20px; display: grid; gap: 8px; max-width: 70ch; }
+footer { color: var(--muted); font-size: 14px; }
+@media (max-width: 520px) { .qhead { grid-template-columns: auto 1fr; } .qhead .pill { grid-column: 2; justify-self: start; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">LLMOps course project · Referee AI · week 1</div>
+    <h1>Chat model through the AI Gateway</h1>
+    <p class="lede">Five referee questions sent to the course chat model with no Laws text attached, to see what it knows on its own. Each answer is checked against the 2026/27 Laws in the <code>laws</code> table.</p>
+    <div class="facts">
+      <span>Model service <b>course_ops.gateway.chat</b></span>
+      <span>Model <b>gpt-oss-120b-080525</b></span>
+      <span>Settings <b>reasoning_effort low, max_tokens 1024</b></span>
+      <span>Auth <b>WorkspaceClient</b></span>
+      <span>Run <a href="https://dbc-88df4c2c-4033.cloud.databricks.com/?o=7474648231747660#job/881911499530058/run/287249592208848">job run in the workspace</a></span>
+    </div>
+  </header>
+
+  <section style="display:grid;gap:12px">
+    <h2>Results</h2>
+    <div class="tbl">
+      <table>
+        <thead><tr><th>#</th><th>Question</th><th>Verdict</th><th class="num">Prompt</th><th class="num">Completion</th><th class="num">Total</th><th class="num">Seconds</th></tr></thead>
+        <tbody>
+          <tr><td class="num">1</td><td>What is the minimum distance opponents must be from the ball at a free kick?</td><td><span class="pill ok">Correct</span></td><td class="num">124</td><td class="num">83</td><td class="num">207</td><td class="num">1.84</td></tr>
+          <tr><td class="num">2</td><td>A defender deliberately handles the ball on the goal line to stop a certain goal. What is the decision?</td><td><span class="pill ok">Correct</span></td><td class="num">129</td><td class="num">241</td><td class="num">370</td><td class="num">2.31</td></tr>
+          <tr><td class="num">3</td><td>Can a player be penalised for offside if they receive the ball directly from a throw-in?</td><td><span class="pill part">Right answer, wrong source</span></td><td class="num">128</td><td class="num">143</td><td class="num">271</td><td class="num">1.60</td></tr>
+          <tr><td class="num">4</td><td>Under the 2026/27 Laws, what happens if a goalkeeper holds the ball in their hands for too long?</td><td><span class="pill bad">Wrong</span></td><td class="num">132</td><td class="num">284</td><td class="num">416</td><td class="num">5.21</td></tr>
+          <tr><td class="num">5</td><td>On which page of the IFAB Laws of the Game 2026/27 is the offside offence defined?</td><td><span class="pill bad">Wrong</span></td><td class="num">131</td><td class="num">127</td><td class="num">258</td><td class="num">2.74</td></tr>
+        </tbody>
+        <tfoot><tr><td></td><td>Total, 5 calls</td><td></td><td class="num">644</td><td class="num">878</td><td class="num">1522</td><td class="num">1.6–5.2</td></tr></tfoot>
+      </table>
+    </div>
+  </section>
+
+  <section style="display:grid;gap:12px">
+    <h2>Limitations observed</h2>
+    <ul>
+      <li><strong>It doesn't know the current edition.</strong> Asked about 2026/27, it gave the old goalkeeper rule (six seconds, indirect free kick) instead of eight seconds and a corner kick.</li>
+      <li><strong>It invents citations.</strong> It gave page 71 for the offside offence (actually pp. 109–111), and quoted wording from the 2023/24 Laws that isn't in them.</li>
+      <li><strong>It sounds equally sure when wrong.</strong> The wrong answers are as confident and well formatted as the right ones, so a referee can't tell them apart.</li>
+      <li><strong>Cost and speed are fine.</strong> 207–416 tokens and 1.6–5.2 seconds per question at low reasoning effort, well inside the course budget.</li>
+    </ul>
+    <p class="lede">This is the case for the rest of the project: answers must be grounded in retrieved sections of the current Laws, with citations taken from <code>laws_chunks</code> and its original page numbers, not from the model's memory.</p>
+  </section>
+
+  <section style="display:grid;gap:4px">
+    <h2>Answers</h2>
+  </section>
+  <section class="q">
+    <div class="qhead"><span class="qn">1</span><h3>What is the minimum distance opponents must be from the ball at a free kick?</h3><span class="pill ok">Correct</span></div>
+    <div class="answer"><div class="label">Model answer</div><pre>The opponents must stand **at least 9.15 m (10 yd)** away from the ball at a free kick.
+
+**Reference:** IFAB Law 13 – *Free Kicks* (the “minimum distance” requirement for defending players).</pre></div>
+    <div class="ref"><div class="label">What the 2026/27 Laws say</div><p>Law 13: opponents at least 9.15 m (10 yds) from the ball.</p></div>
+  </section>
+  <section class="q">
+    <div class="qhead"><span class="qn">2</span><h3>A defender deliberately handles the ball on the goal line to stop a certain goal. What is the decision?</h3><span class="pill ok">Correct</span></div>
+    <div class="answer"><div class="label">Model answer</div><pre>**Decision:** Award a penalty kick and send the defender off (red card).
+
+**Citations**
+
+- **Law 14 – The Penalty Kick** – A penalty kick is awarded if a player commits a direct free‑kick offence (including deliberate handling of the ball) inside his own penalty area.
+- **Law 12 – Fouls and Misconduct** – Deliberate handling of the ball to deny an opponent a goal‑scoring opportunity is a *denying an obvious goal‑scoring opportunity* (DOGSO) offence, which warrants a **red card** (sending‑off).
+
+So the referee should:
+1. Award a penalty kick to the attacking team.
+2. Show the defender a red card for DOGSO (deliberate handball).</pre></div>
+    <div class="ref"><div class="label">What the 2026/27 Laws say</div><p>Law 12.4, DOGSO (p124): a player who denies a goal by a deliberate handball offence is sent off; Law 14 gives the penalty kick.</p></div>
+  </section>
+  <section class="q">
+    <div class="qhead"><span class="qn">3</span><h3>Can a player be penalised for offside if they receive the ball directly from a throw-in?</h3><span class="pill part">Right answer, wrong source</span></div>
+    <div class="answer"><div class="label">Model answer</div><pre>**No.** A player cannot be penalised for off‑side when he receives the ball directly from a throw‑in.
+
+**Relevant rule:**
+- **Law 11 – Offside**, paragraph *Offside offence* (2023/24 Laws): “A player is not in an off‑side position if he receives the ball directly from a goal kick, a corner kick, or a throw‑in.”
+
+Therefore, if the ball is thrown in and a teammate catches or otherwise plays it immediately, the off‑side rule does not apply.</pre></div>
+    <div class="ref"><div class="label">What the 2026/27 Laws say</div><p>Law 11.3 No offence (p111): “There is no offside offence if a player receives the ball directly from: a goal kick, a throw-in, a corner kick.” The model quotes wording that isn&#x27;t in the Laws and cites the 2023/24 edition.</p></div>
+  </section>
+  <section class="q">
+    <div class="qhead"><span class="qn">4</span><h3>Under the 2026/27 Laws, what happens if a goalkeeper holds the ball in their hands for too long?</h3><span class="pill bad">Wrong</span></div>
+    <div class="answer"><div class="label">Model answer</div><pre>**What the Law says**
+
+- **Law 12 – Fouls and Misconduct** (2026/27 edition) states that a goalkeeper is allowed to control the ball with his/her hands for **no more than 6 seconds** after it has been released from a stoppage (e.g., a goal‑kick, corner, throw‑in, free kick, or a deliberate pass from a teammate).
+- If the goalkeeper **holds, carries or touches the ball with his/her hands for longer than 6 seconds**, the referee awards an **indirect free kick** to the opposing team.
+
+**Where the restart is taken**
+
+- The indirect free kick is taken **from the place where the offence occurred**.
+- If the offence occurs inside the goalkeeper’s own penalty area, the indirect free kick is taken from the spot of the offence, **but not closer than the edge of the penalty area** (i.e., the kick is taken from the nearest point on the line of the penalty area).
+
+**Summary**
+
+- **Too‑long hold (&gt;6 s) → indirect free kick to the opponents** (Law 12).</pre></div>
+    <div class="ref"><div class="label">What the 2026/27 Laws say</div><p>Law 12.3 Corner kick (p119): a corner kick is awarded if a goalkeeper controls the ball with their hands for more than eight seconds. The model gives the old rule (six seconds, indirect free kick).</p></div>
+  </section>
+  <section class="q">
+    <div class="qhead"><span class="qn">5</span><h3>On which page of the IFAB Laws of the Game 2026/27 is the offside offence defined?</h3><span class="pill bad">Wrong</span></div>
+    <div class="answer"><div class="label">Model answer</div><pre>The off‑side offence is defined in **Law 11 – Offside**.
+In the IFAB 2026/27 edition the definition appears on **page 71** of the printed Laws of the Game (the same page in the PDF version).
+
+*Citation:* IFAB Laws of the Game 2026/27, **Law 11 – Offside**, page 71.</pre></div>
+    <div class="ref"><div class="label">What the 2026/27 Laws say</div><p>Law 11.2 Offside offence is on pp. 109–111. The model invents page 71.</p></div>
+  </section>
+
+  <footer>Built from the exit value of <code>notebooks/3_gateway_experiment.py</code>, run once on 23 Oct 2026. No credentials are stored in the notebook or this page.</footer>
+</div>
+</body>
+</html>

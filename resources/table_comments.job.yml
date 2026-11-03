@@ -1,0 +1,22 @@
+# Comments the Laws tables and their columns in your schema of the target's catalog, so Genie, the Assistant and
+# agents can understand them. The ingest replaces these tables, so laws_ingest runs this job after each rebuild; run
+# it on its own after changing a comment.
+resources:
+  jobs:
+    table_comments:
+      name: job-table-comments-adambuckleyjones-${bundle.target}
+      budget_policy_id: "6bc3dda5-d72e-3084-9c1c-29a87a79fa27"
+      environments:
+        - environment_key: default
+          spec:
+            environment_version: "6"
+            dependencies:
+              - ../dist/*.whl
+
+      tasks:
+        - task_key: table_comments
+          environment_key: default
+          notebook_task:
+            notebook_path: ../notebooks/7_table_comments.py
+            base_parameters:
+              env: ${bundle.target}
