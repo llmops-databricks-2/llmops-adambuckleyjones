@@ -15,7 +15,8 @@ def test_project_config_loads_for_dev() -> None:
     cfg = ProjectConfig.from_yaml(str(PROJECT_CONFIG), "dev")
 
     assert cfg.full_volume_path == "llmops_dev.adambuckleyjones.laws_files"
-    assert cfg.warehouse_id == "e9cda9338abe31cc"
+    assert cfg.warehouse_id == "76f04e49e6e5788b"
     assert cfg.embedding_endpoint == "databricks-gte-large-en"
+    assert cfg.embedding_service == "course_ops.gateway.embed"
     assert cfg.lakebase_project_id == "lb-llmops-adambuckleyjones"
     assert cfg.usage_policy_id == "6bc3dda5-d72e-3084-9c1c-29a87a79fa27"

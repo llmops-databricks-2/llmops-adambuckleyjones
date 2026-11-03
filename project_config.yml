@@ -1,5 +1,7 @@
 # Project configuration for the LLMOps course, filled in for you at onboarding.
 # Resources are provisioned at onboarding except the volume, which you create during the course.
+# embedding_endpoint is the serving endpoint for ai_query, AI Search and DatabricksServingEndpoint;
+# embedding_service is the AI Gateway model service for the OpenAI client (README.md).
 
 # Your usage policy: set it on every serverless job, endpoint and app you create.
 usage_policy_id: "6bc3dda5-d72e-3084-9c1c-29a87a79fa27"
@@ -15,7 +17,8 @@ dev:
   llm_endpoint: "course_ops.gateway.chat"
   # course_ops.gateway.embed can't be used: ai_query doesn't support custom Unity Gateway model services yet
   embedding_endpoint: "databricks-gte-large-en"
-  warehouse_id: "e9cda9338abe31cc"
+  embedding_service: "course_ops.gateway.embed"
+  warehouse_id: "76f04e49e6e5788b"
   experiment_path: "/llmops/adambuckleyjones-dev"
   # Your provisioned Lakebase project.
   lakebase_project_id: "lb-llmops-adambuckleyjones"
@@ -28,7 +31,8 @@ acc:
   llm_endpoint: "course_ops.gateway.chat"
   # course_ops.gateway.embed can't be used: ai_query doesn't support custom Unity Gateway model services yet
   embedding_endpoint: "databricks-gte-large-en"
-  warehouse_id: "e9cda9338abe31cc"
+  embedding_service: "course_ops.gateway.embed"
+  warehouse_id: "76f04e49e6e5788b"
   experiment_path: "/llmops/adambuckleyjones-acc"
   # Your provisioned Lakebase project for this environment.
   lakebase_project_id: "lb-llmops-adambuckleyjones"
@@ -41,7 +45,8 @@ prd:
   llm_endpoint: "course_ops.gateway.chat"
   # course_ops.gateway.embed can't be used: ai_query doesn't support custom Unity Gateway model services yet
   embedding_endpoint: "databricks-gte-large-en"
-  warehouse_id: "e9cda9338abe31cc"
+  embedding_service: "course_ops.gateway.embed"
+  warehouse_id: "76f04e49e6e5788b"
   experiment_path: "/llmops/adambuckleyjones-prd"
   # Your provisioned Lakebase project for this environment.
   lakebase_project_id: "lb-llmops-adambuckleyjones"
