@@ -1,0 +1,21 @@
+# Asks the Genie space from genie_space.yml its test questions and returns the answers and SQL as the exit value:
+# evidence that it answers structured questions and declines match situations. Run after changing the space.
+resources:
+  jobs:
+    genie_space:
+      name: job-genie-space-adambuckleyjones-${bundle.target}
+      budget_policy_id: "6bc3dda5-d72e-3084-9c1c-29a87a79fa27"
+      environments:
+        - environment_key: default
+          spec:
+            environment_version: "6"
+            dependencies:
+              - ../dist/*.whl
+
+      tasks:
+        - task_key: genie_space
+          environment_key: default
+          notebook_task:
+            notebook_path: ../notebooks/8_genie_space.py
+            base_parameters:
+              genie_space_id: ${resources.genie_spaces.referee_ai_laws.id}

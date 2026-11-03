@@ -5,25 +5,27 @@ Stages 1–5 are the week 2 data work (due 21 Oct); stages 6–9 follow the cour
 
 Architecture: https://claude.ai/artifact/4UzwdQTspMLCQMTsc8ci8L
 
-## Next steps (28 Oct)
+## Next steps (3 Nov)
 
-1. Lecture 3 (28 Oct, in progress), already in `course-code-hub`: MCP tool calling and agent orchestration, then
-   memory, evaluation and serving (Stage 6). `LakebasePgVectorManager.search` is the first retrieval tool.
+1. Week 3 (lecture 3: MCP tool calling and agent orchestration): Stage 6, the agent with tools and memory, on a
+   `week3` branch from `week1`. Its PR targets `week1` and is retargeted to `main` once #2 merges. The orchestration
+   is with Maria for review; the Genie space and session memory don't depend on it, so they go first.
 2. PR #2 is with Basak for review, posted on Discord on 28 Oct at 9am. It holds weeks 1 and 2 together, as Maria
-   allowed because week 1 was late. Week 3 gets its own PR again, on a `week3` branch from `main` once #2 merges.
-3. Email FA contacts for past Laws of the Game exam questions as Excel or CSV, last season (2025/26) and this season
+   allowed because week 1 was late.
+3. The course moved to a new workspace (`dbc-e81ca4d2-f6bd`) on 3 Nov. Done: profile re-pointed, jobs redeployed,
+   Lakebase sync and table comments re-run, search experiment gives the same hit rates. Reply in the course channel.
+4. Email FA contacts for past Laws of the Game exam questions as Excel or CSV, last season (2025/26) and this season
    so far, with permission to use them (draft written 28 Oct). Ask for: question_id, question, options,
    correct_answer, explanation, law_reference, season. Recheck older seasons against the 2026/27 changes. Keep the
    file in the volume, out of git.
-4. Retrieval follow-ups from `retrieval_experiment.html`: hybrid search with `websearch_to_tsquery` or key terms.
+5. Retrieval follow-ups from `retrieval_experiment.html`: hybrid search with `websearch_to_tsquery` or key terms.
    `MAX_CHUNK_WORDS` stays at 400 (an untuned guess, sized for a 512-token model; GTE takes 8,192). Tried 200 on
    28 Oct: 168 section chunks, same hit rates, the DOGSO handball question still misses 12.4. Sweep 100/200/400 once
    the FA questions give a bigger eval set; five questions can't separate them.
-5. Stage 3: `law_changes` from the law changes file, and `scenarios` once the FA questions arrive.
-6. Not committed yet (28 Oct): `search` now orders by `embedding <=> query`, so Postgres uses the HNSW index (checked
-   with `EXPLAIN`; same results and hit rates); the Stage 4 check and the notes above.
-7. `synced_tables` crashed once on 24 Oct while importing `psycopg` (SIGABRT loading `psycopg-binary`), then passed
-   on repair and on three runs since. Add `max_retries: 1` to the task if it happens again.
+6. Stage 3: `law_changes` from the law changes file, and `scenarios` once the FA questions arrive, then their agent
+   tools (`get_law_changes`, `find_similar_scenarios`).
+7. `psycopg` crashes now and then on serverless while importing (SIGABRT loading `psycopg-binary`): `synced_tables`
+   on 24 Oct, the search experiment on 3 Nov; both passed when re-run. No retry for now: re-run by hand.
 8. Set up the Databricks VS Code extension with profile `llmops-course` and run something from it.
 
 **Done so far:**
@@ -112,6 +114,9 @@ kick" (p119) and disciplinary action is 12.4. Law 6 has no section 6: the signal
 
 **Done when:** every scenario has a decision, a restart, a sanction and a reference to a law section.
 
+Then the agent gets two more tools (Stage 6): `get_law_changes` on `law_changes` and `find_similar_scenarios` on
+embedded `scenarios`.
+
 ## Stage 4: embeddings and search in Lakebase
 
 1. Embed `laws_chunks` (and the alternative `laws_chunks_fixed`) with `databricks-gte-large-en` via `ai_query`, with
@@ -144,11 +149,79 @@ as the DOGSO miss: long section chunks dilute one specific sentence. Revisit wit
 
 **Status (24 Oct): done.** The job runs parse, split with embeddings, and the Lakebase sync on dev.
 
+## Stage 6: agent with tools and memory (week 3)
+
+Lecture 3 builds a tool-calling agent (`SimpleAgent` in the course notebooks, Chat Completions through the AI
+Gateway), tools as custom functions or over MCP (UC functions, Genie) and session memory in Lakebase
+(`LakebaseMemory`). Here the agent lives in `src/referee_ai/agent.py`, not a notebook, so it has unit tests and can be
+served in week 5. Tools use only the data that exists today; `law_changes` and `scenarios` tools wait for Stage 3.
+
+| Tool | Connection | Data | Use |
+|---|---|---|---|
+| `search_laws(query)` | custom Python function | `laws_chunks_synced`, through `LakebasePgVectorManager.search` | Find the passages for one part of a question, across all Laws |
+| `get_law_section(section)` | UC SQL function over MCP | `laws` | Full text and pages of e.g. `12.4`, when a chunk is cut off |
+| Genie space "Referee AI Laws" | Genie MCP | `laws`, `laws_chunks` (described by `7_table_comments`) | Structured questions: "list the sections of Law 12", "which sections are on page 119" |
+
+No Law filter on `search_laws`: many questions span several Laws (handball on the line is Law 12 for the offence
+and sanction, Law 14 for the penalty), so a wrong filter would hide the right section. In the retrieval experiment
+the filter only helped when it was given the right Law.
+
+Orchestration (proposed, to review with Maria): a fixed workflow with one model-directed step.
+
+- **Code-controlled:** load the session's history from Lakebase, then always run `search_laws` on the whole
+  question, so the model never answers a Laws question from memory (2 of 5 wrong in `gateway_experiment.html`).
+  Pass the results to the model, run the tool loop (at most 6 iterations, fallback answer at the cap), save the
+  question and the final answer, return it. Tool errors go back to the model as the tool result instead of failing
+  the turn.
+- **Model decisions:** split a multi-part question (decision, sanction, restart) into one `search_laws` per part
+  when the first search doesn't cover every part; fetch a full section; ask Genie a structured question; reason
+  over all the results and answer.
+- **History:** only user questions and final answers are saved, not tool calls or results. It keeps history small;
+  the model fetches tool results again when it needs them.
+- **System prompt:** answer only from tool results, cite Law, section and page, and say when the Laws don't cover it.
+- **Measured in Stage 7:** how often the model searches again on the FA questions and whether it changes accuracy,
+  latency and tokens. If it rarely helps, drop the loop and keep a fixed RAG workflow.
+
+Order: the Genie space and memory first, as they don't depend on the orchestration; the agent loop after review.
+
+1. `resources/genie_space.yml`: the Genie space on `laws` and `laws_chunks`, with sample questions and instructions.
+   Test it directly, then through Genie MCP.
+2. `src/referee_ai/memory.py`: `LakebaseMemory` (`session_messages` table) from the course, imports changed to
+   `referee_ai`. Test: save two messages in one session, read them back from a new instance, a second session stays
+   separate. Done (3 Nov): `session_memory` job (`notebooks/9_session_memory.py`), run 109832829010746, connected as
+   `sp-deploy-adambuckleyjones-dev` through the UC secrets `databricks_client_id` and `databricks_client_secret`.
+3. `src/referee_ai/mcp.py` and `notebooks/8_uc_functions.py`: `ToolInfo`, `create_mcp_tools`, and `get_law_section`
+   as a UC SQL function with comments (the model sees them through MCP), with a test call on `12.4`.
+4. `src/referee_ai/tools.py` (`search_laws` tool) and `src/referee_ai/agent.py` (`RefereeAgent.answer(question,
+   session_id)`), with `tests/test_agent.py` and `tests/test_tools.py` on a fake LLM client and in-memory history:
+   first search always run, tool dispatch, tool errors, iteration cap, history loaded first, only the question and
+   answer saved.
+5. `notebooks/10_agent.py` and `resources/agent.job.yml` (UC functions, then the agent): a single-part question, a
+   multi-part question, a structured question, an out-of-scope question, then a follow-up that needs the history
+   ("and what is the restart?") from a new agent instance.
+6. A PR `week3` → `week1` with the design choices above and a test plan.
+
+**Done when:** the agent job answers the referee questions citing Law sections, splits the multi-part question into
+more than one search, sends the structured question to Genie, declines the out-of-scope one, and a new agent
+instance answers a follow-up from the history it loads from Lakebase.
+
+**Status (3 Nov): design with Maria for review.** Genie space deployed to dev (`resources/genie_space.yml`) and
+asked 5 questions through the Conversation API. The 4 structured ones were right, with the expected SQL (Law 12: 6
+sections; page 119: 12.2, 12.3, 12.4; 12.4: 15 subheadings; sections and first page per Law). The match situation
+("defender handles on the goal line") should have been refused, but Genie searched the `text` column with `ILIKE` and
+answered (sending-off, penalty, 12.4 p124): the text instruction alone didn't stop it. Four paraphrased situations
+tested whether Genie is good enough as RAG: 2 right (back-pass, wall distance), 2 wrong. "Keeper holds the ball too
+long" got an indirect free kick, but it is a corner kick (12.3 p119). "Offside from a throw-in" was left undecided:
+Genie picked sections 11.1, 11.2 and 15.1 itself and missed 11.3. Genie guesses keywords and a Law filter, and takes
+19–36 s. Fix: `text` hidden in both tables so situations go to `search_laws`. Re-asked all 9: the 4 structured
+answers are unchanged, and the 5 situations are declined (3 with no SQL; 2 point to the right sections: 12.1 and
+12.4 p116/124, 13.2 p131–132). Reproducible as the `genie_space` job (`notebooks/8_genie_space.py`): run 797227736232012, same
+results.
+
 ## Later stages
 
 | Stage | Week | Work |
 |---|---|---|
-| 6 | 3 · 28 Oct | The four tools (`search_laws`, `find_similar_scenarios`, `get_law_section`, `get_law_changes`) and the agent loop. Test them in a notebook first. |
 | 7 | 4 · 4 Nov | MLflow tracing, and evaluations that use `scenarios` as ground truth. Record a baseline accuracy. |
 | 8 | 5 · 11 Nov | Serving endpoint and chat UI deployed through dev, acc and prd. |
 | 9 | 6 · 18 Nov | Monitoring of traces, judges on live traffic, gateway cost. |
