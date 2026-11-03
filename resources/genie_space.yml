@@ -1,0 +1,89 @@
+# Genie space for structured questions about the Laws: listing sections, page lookups, counts. Match situations
+# ("what's the decision if...") are for search_laws, not Genie. Column descriptions come from the UC comments that
+# 7_table_comments writes, so they aren't repeated here.
+# Genie validates this strictly: ids are 32 lowercase hex characters, id-keyed lists are sorted by id, tables by
+# identifier and column_configs by column_name.
+resources:
+  genie_spaces:
+    referee_ai_laws:
+      title: Referee AI Laws
+      description: >-
+        Structured questions about the IFAB Laws of the Game 2026/27: which sections a Law has, what is on a page,
+        the subheadings of a section, and counts. Not for deciding match situations.
+      warehouse_id: ${var.warehouse_id}
+      serialized_space:
+        version: 2
+        config:
+          sample_questions:
+            - id: "10000000000000000000000000000001"
+              question: ["List the sections of Law 12"]
+            - id: "10000000000000000000000000000002"
+              question: ["Which sections are on page 119?"]
+            - id: "10000000000000000000000000000003"
+              question: ["How many sections does each Law have, and on which page does it start?"]
+            - id: "10000000000000000000000000000004"
+              question: ["What are the subheadings of section 12.4?"]
+        data_sources:
+          tables:
+            - identifier: ${var.catalog}.${var.schema}.laws
+              column_configs:
+                - column_name: law_number
+                  synonyms: ["law", "law number"]
+                - column_name: law_title
+                  enable_format_assistance: true
+                  enable_entity_matching: true
+                - column_name: pages
+                  synonyms: ["page", "page number"]
+                - column_name: section
+                  synonyms: ["section number", "clause"]
+                - column_name: section_title
+                  enable_format_assistance: true
+                  enable_entity_matching: true
+                # Hidden so Genie can't answer match situations from the Laws text: the instruction alone didn't
+                # stop it (3 Nov). Those questions go to search_laws.
+                - column_name: text
+                  exclude: true
+            - identifier: ${var.catalog}.${var.schema}.laws_chunks
+              column_configs:
+                - column_name: chunk_id
+                  exclude: true
+                - column_name: embedding
+                  exclude: true
+                - column_name: id
+                  exclude: true
+                - column_name: subheading
+                  enable_format_assistance: true
+                  enable_entity_matching: true
+                - column_name: text
+                  exclude: true
+        instructions:
+          text_instructions:
+            # Kept short: scope and citation rules can't be expressed in column configs or example SQL.
+            - id: "30000000000000000000000000000001"
+              content:
+                - "## PURPOSE\n"
+                - "- Look up the structure of the IFAB Laws of the Game 2026/27 for referees: sections, titles, subheadings and pages.\n\n"
+                - "## CONSTRAINTS\n"
+                - "- Don't decide match situations (decisions, sanctions, restarts); say these need the Laws text instead.\n"
+                - "- Always show section and pages, so answers can be cited.\n"
+          example_question_sqls:
+            - id: "20000000000000000000000000000001"
+              question: ["List the sections of Law 12"]
+              sql:
+                - "SELECT laws.section, laws.section_title, laws.pages "
+                - "FROM ${var.catalog}.${var.schema}.laws "
+                - "WHERE laws.law_number = 12 "
+                - "ORDER BY CAST(element_at(split(laws.section, '[.]'), 2) AS INT)"
+            - id: "20000000000000000000000000000002"
+              question: ["Which sections are on page 119?"]
+              sql:
+                - "SELECT laws.law_number, laws.law_title, laws.section, laws.section_title "
+                - "FROM ${var.catalog}.${var.schema}.laws "
+                - "WHERE array_contains(laws.pages, 119) "
+                - "ORDER BY laws.law_number, laws.section"
+            - id: "20000000000000000000000000000003"
+              question: ["What are the subheadings of section 12.4?"]
+              sql:
+                - "SELECT DISTINCT laws_chunks.subheading "
+                - "FROM ${var.catalog}.${var.schema}.laws_chunks "
+                - "WHERE laws_chunks.section = '12.4' AND laws_chunks.subheading IS NOT NULL"
