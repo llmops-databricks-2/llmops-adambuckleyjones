@@ -4,8 +4,6 @@ Adapted from the course's LakebasePgVectorManager. The synced table is a read-on
 (laws_chunks or laws_chunks_fixed) whose embedding column is synced as a pgvector vector(1024).
 """
 
-import os
-import urllib.parse
 from typing import Any
 
 import psycopg
@@ -13,6 +11,7 @@ from databricks.sdk import WorkspaceClient
 from loguru import logger
 
 from referee_ai.config import ProjectConfig
+from referee_ai.lakebase import connect
 
 RESULT_COLUMNS = "id, law_number, section, section_title, subheading, pages, text"
 
@@ -30,21 +29,9 @@ class LakebasePgVectorManager:
         # section and subheading, so keywords in those match too.
         self.text_expr = "to_tsvector('english', text)"
 
-    def _connection_string(self) -> str:
-        """Build a connection string with a fresh database credential for the project's first endpoint."""
-        postgres = self.workspace.postgres
-        branch = next(iter(postgres.list_branches(parent=f"projects/{self.config.lakebase_project_id}")))
-        endpoint = next(iter(postgres.list_endpoints(parent=branch.name)))
-        credential = postgres.generate_database_credential(endpoint=endpoint.name)
-        user = os.environ.get("DATABRICKS_CLIENT_ID") or self.workspace.current_user.me().user_name
-        return (
-            f"postgresql://{urllib.parse.quote_plus(user)}:{credential.token}@{endpoint.status.hosts.host}:5432/"
-            "databricks_postgres?sslmode=require"
-        )
-
     def connection(self) -> psycopg.Connection:
         """Open a Lakebase connection."""
-        return psycopg.connect(self._connection_string())
+        return connect(self.workspace, self.config.lakebase_project_id)
 
     def ensure_extension(self) -> None:
         """Enable pgvector. Run before creating a synced table with a vector column: syncing doesn't install it."""

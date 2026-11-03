@@ -1,0 +1,21 @@
+# Saves and reads back a conversation in Lakebase as the dev service principal: evidence that session memory
+# persists across instances and that sessions stay separate. Run after changing memory.py.
+resources:
+  jobs:
+    session_memory:
+      name: job-session-memory-adambuckleyjones-${bundle.target}
+      budget_policy_id: "6bc3dda5-d72e-3084-9c1c-29a87a79fa27"
+      environments:
+        - environment_key: default
+          spec:
+            environment_version: "6"
+            dependencies:
+              - ../dist/*.whl
+
+      tasks:
+        - task_key: session_memory
+          environment_key: default
+          notebook_task:
+            notebook_path: ../notebooks/9_session_memory.py
+            base_parameters:
+              env: ${bundle.target}

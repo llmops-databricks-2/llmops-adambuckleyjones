@@ -188,14 +188,15 @@ Order: the Genie space and memory first, as they don't depend on the orchestrati
    Test it directly, then through Genie MCP.
 2. `src/referee_ai/memory.py`: `LakebaseMemory` (`session_messages` table) from the course, imports changed to
    `referee_ai`. Test: save two messages in one session, read them back from a new instance, a second session stays
-   separate.
+   separate. Done (3 Nov): `session_memory` job (`notebooks/9_session_memory.py`), run 109832829010746, connected as
+   `sp-deploy-adambuckleyjones-dev` through the UC secrets `databricks_client_id` and `databricks_client_secret`.
 3. `src/referee_ai/mcp.py` and `notebooks/8_uc_functions.py`: `ToolInfo`, `create_mcp_tools`, and `get_law_section`
    as a UC SQL function with comments (the model sees them through MCP), with a test call on `12.4`.
 4. `src/referee_ai/tools.py` (`search_laws` tool) and `src/referee_ai/agent.py` (`RefereeAgent.answer(question,
    session_id)`), with `tests/test_agent.py` and `tests/test_tools.py` on a fake LLM client and in-memory history:
    first search always run, tool dispatch, tool errors, iteration cap, history loaded first, only the question and
    answer saved.
-5. `notebooks/9_agent.py` and `resources/agent.job.yml` (UC functions, then the agent): a single-part question, a
+5. `notebooks/10_agent.py` and `resources/agent.job.yml` (UC functions, then the agent): a single-part question, a
    multi-part question, a structured question, an out-of-scope question, then a follow-up that needs the history
    ("and what is the restart?") from a new agent instance.
 6. A PR `week3` → `week1` with the design choices above and a test plan.
